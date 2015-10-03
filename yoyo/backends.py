@@ -231,9 +231,14 @@ class DatabaseBackend(object):
         sql = self.create_table_sql.format(table_name=self.migration_table)
         try:
             with self.transaction():
-                self.execute(sql)
+                self.get_applied_migration_ids()
+            table_exists = True
         except self.DatabaseError:
-            pass
+            table_exists = False
+
+        if not table_exists:
+            with self.transaction():
+                self.execute(sql)
 
     def _with_placeholders(self, sql):
         placeholder_gen = {'qmark': '?',
@@ -254,7 +259,7 @@ class DatabaseBackend(object):
         were applied
         """
         sql = self._with_placeholders(self.applied_ids_sql.format(self))
-        return [row[0] for row in self.execute(sql)]
+        return [row[0] for row in self.execute(sql).fetchall()]
 
     def to_apply(self, migrations):
         """
