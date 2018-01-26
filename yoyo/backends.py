@@ -458,3 +458,18 @@ class PostgresqlBackend(DatabaseBackend):
             self.connection.autocommit = True
             yield
             self.connection.autocommit = saved
+
+class SnowflakeBackend(DatabaseBackend):
+
+    driver_module = 'snowflake.connector'
+
+    def connect(self, dburi):
+        connargs = []
+
+        if dburi.username is not None:
+            connargs.append('user=%s' % dburi.username)
+        if dburi.password is not None:
+            connargs.append('password=%s' % dburi.password)
+        connargs.append('account=%s' % dburi.database)
+        return self.driver.connect(' '.join(connargs))
+

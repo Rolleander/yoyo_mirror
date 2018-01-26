@@ -21,7 +21,8 @@ from .backends import (PostgresqlBackend,
                        SQLiteBackend,
                        ODBCBackend,
                        MySQLBackend,
-                       MySQLdbBackend)
+                       MySQLdbBackend,
+                       SnowflakeBackend)
 from .compat import urlsplit, urlunsplit, parse_qsl, urlencode, quote, unquote
 
 BACKENDS = {
@@ -32,6 +33,7 @@ BACKENDS = {
     'mysql': MySQLBackend,
     'mysql+mysqldb': MySQLdbBackend,
     'sqlite': SQLiteBackend,
+    'snowflake': SnowflakeBackend
 }
 
 

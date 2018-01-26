@@ -15,7 +15,10 @@ syntax: regexp
 ^\.noseids$
 ^\.tox/
 ~$
+.idea/
 
 # Mercurial generated files
 .*\.orig$
 .*\.rej$
+
+
