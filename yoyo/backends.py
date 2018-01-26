@@ -459,17 +459,21 @@ class PostgresqlBackend(DatabaseBackend):
             yield
             self.connection.autocommit = saved
 
+
 class SnowflakeBackend(DatabaseBackend):
 
     driver_module = 'snowflake.connector'
 
     def connect(self, dburi):
-        connargs = []
+        database, schema = dburi.database.split('/')
+        return self.driver.connect(user=dburi.username, password=dburi.password, account=dburi.hostname,
+                                   database=database, schema=schema, warehouse=dburi.args['warehouse'])
 
-        if dburi.username is not None:
-            connargs.append('user=%s' % dburi.username)
-        if dburi.password is not None:
-            connargs.append('password=%s' % dburi.password)
-        connargs.append('account=%s' % dburi.database)
-        return self.driver.connect(' '.join(connargs))
+    def savepoint(self, id):
+        pass
 
+    def savepoint_release(self, id):
+        pass
+
+    def savepoint_rollback(self, id):
+        pass
