@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from importlib import import_module
 from itertools import count
 from logging import getLogger
+
 import os
 import time
 
@@ -501,7 +502,8 @@ class MySQLBackend(DatabaseBackend):
     driver_module = 'pymysql'
 
     def connect(self, dburi):
-        kwargs = dburi.args
+        kwargs = {'db': dburi.database}
+        kwargs.update(dburi.args)
         if dburi.username is not None:
             kwargs['user'] = dburi.username
         if dburi.password is not None:
@@ -542,16 +544,17 @@ class PostgresqlBackend(DatabaseBackend):
     driver_module = 'psycopg2'
 
     def connect(self, dburi):
-        connect_args = {'dbname': dburi.database}
+        kwargs = {'dbname': dburi.database}
+        kwargs.update(dburi.args)
         if dburi.username is not None:
-            connect_args['user'] = dburi.username
+            kwargs['user'] = dburi.username
         if dburi.password is not None:
-            connect_args['password'] = dburi.password
+            kwargs['password'] = dburi.password
         if dburi.port is not None:
-            connect_args['port'] = dburi.port
+            kwargs['port'] = dburi.port
         if dburi.hostname is not None:
-            connect_args['host'] = dburi.hostname
-        return self.driver.connect(**connect_args)
+            kwargs['host'] = dburi.hostname
+        return self.driver.connect(**kwargs)
 
     @contextmanager
     def disable_transactions(self):
