@@ -237,10 +237,10 @@ def upgrade_legacy_config(args, config, sources):
             except configparser.NoOptionError:
                 pass
             try:
-                args.migration_table = (
-                    args.migration_table
-                    or legacy_config.get("DEFAULT", "migration_table")
-                )
+                if "migration_table" not in args:
+                    args.migration_table = legacy_config.get(
+                        "DEFAULT", "migration_table"
+                    )
             except configparser.NoOptionError:
                 pass
 
@@ -256,7 +256,10 @@ def get_backend(args, config):
     try:
         migration_table = args.migration_table
     except AttributeError:
-        migration_table = config.get("DEFAULT", "migration_table")
+        try:
+            migration_table = config.get("DEFAULT", "migration_table")
+        except configparser.NoOptionError:
+            migration_table = default_migration_table
 
     if dburi is None:
         raise InvalidArgument("Please specify a database uri")
@@ -287,16 +290,13 @@ def main(argv=None):
     verbosity = min(max_verbosity, max(min_verbosity, verbosity))
     configure_logging(verbosity)
 
-    if vars(args).get("sources"):
+    if "sources" in args:
         config.set("DEFAULT", "sources", " ".join(args.sources))
-    if args.database:
+    if "database" in args:
         # ConfigParser requires that any percent signs in the db uri be escaped.
         config.set("DEFAULT", "database", args.database.replace("%", "%%"))
-    config.set(
-        "DEFAULT",
-        "migration_table",
-        vars(args).get("migration_table", default_migration_table),
-    )
+    if "migration_table" in args:
+        config.set("DEFAULT", "migration_table", args.migration_table)
     config.set(
         "DEFAULT",
         "batch_mode",
@@ -309,7 +309,8 @@ def main(argv=None):
             return main(argv)
 
     try:
-        args.func(args, config)
+        if "func" in args:
+            args.func(args, config)
     except InvalidArgument as e:
         argparser.error(e.args[0])
 
