@@ -144,11 +144,12 @@ class Migration(object):
 
     __all_migrations = {}
 
-    def __init__(self, id, path):
+    def __init__(self, id, path, source):
         self.id = id
         self.hash = get_migration_hash(id)
         self.path = path
         self.steps = None
+        self.source = source
         self.use_transactions = True
         self._depends = None
         self.__all_migrations[id] = self
@@ -491,7 +492,9 @@ def read_migrations(*sources):
                 migration_class = Migration
 
             migration = migration_class(
-                os.path.splitext(os.path.basename(path))[0], path
+                os.path.splitext(os.path.basename(path))[0],
+                path,
+                source=source,
             )
             if migration_class is PostApplyHookMigration:
                 migrations.post_apply.append(migration)
