@@ -27,27 +27,54 @@ from yoyo import utils
 
 
 def install_argparsers(global_parser, subparsers):
-    migration_parser = argparse.ArgumentParser(add_help=False)
-    migration_parser.add_argument(
+    # Standard options
+    standard_options_parser = argparse.ArgumentParser(add_help=False)
+    standard_options_parser.add_argument(
         "sources", nargs="*", help="Source directory of migration scripts"
     )
 
-    migration_parser.add_argument(
+    standard_options_parser.add_argument(
         "-d",
         "--database",
         default=None,
         help="Database, eg 'sqlite:///path/to/sqlite.db' "
         "or 'postgresql://user@host/db'",
     )
+    standard_options_parser.add_argument(
+        "-p",
+        "--prompt-password",
+        dest="prompt_password",
+        action="store_true",
+        help="Prompt for the database password",
+    )
+    standard_options_parser.add_argument(
+        "--migration-table",
+        dest="migration_table",
+        action="store",
+        default=default_migration_table,
+        help="Name of table to use for storing " "migration metadata",
+    )
 
-    migration_parser.add_argument(
+    # Options related to filtering the list of migrations
+    filter_parser = argparse.ArgumentParser(add_help=False)
+    filter_parser.add_argument(
         "-m",
         "--match",
         help="Select migrations matching PATTERN (regular expression)",
         metavar="PATTERN",
     )
+    filter_parser.add_argument(
+        "-r",
+        "--revision",
+        help="Apply/rollback migration with id " "REVISION",
+        metavar="REVISION",
+    )
 
-    migration_parser.add_argument(
+    # Options related to applying/rolling back migrations
+    apply_parser = argparse.ArgumentParser(
+        add_help=False, parents=[filter_parser]
+    )
+    apply_parser.add_argument(
         "-a",
         "--all",
         dest="all",
@@ -55,8 +82,7 @@ def install_argparsers(global_parser, subparsers):
         help="Select all migrations, regardless of whether "
         "they have been previously applied",
     )
-
-    migration_parser.add_argument(
+    apply_parser.add_argument(
         "-f",
         "--force",
         dest="force",
@@ -65,60 +91,37 @@ def install_argparsers(global_parser, subparsers):
         "previous steps have failed",
     )
 
-    migration_parser.add_argument(
-        "-p",
-        "--prompt-password",
-        dest="prompt_password",
-        action="store_true",
-        help="Prompt for the database password",
-    )
-
-    migration_parser.add_argument(
-        "--migration-table",
-        dest="migration_table",
-        action="store",
-        default=default_migration_table,
-        help="Name of table to use for storing " "migration metadata",
-    )
-
-    migration_parser.add_argument(
-        "-r",
-        "--revision",
-        help="Apply/rollback migration with id " "REVISION",
-        metavar="REVISION",
-    )
-
     parser_apply = subparsers.add_parser(
         "apply",
         help="Apply migrations",
-        parents=[global_parser, migration_parser],
+        parents=[global_parser, standard_options_parser, apply_parser],
     )
     parser_apply.set_defaults(func=apply, command_name="apply")
 
     parser_rollback = subparsers.add_parser(
         "rollback",
-        parents=[global_parser, migration_parser],
+        parents=[global_parser, standard_options_parser, apply_parser],
         help="Rollback migrations",
     )
     parser_rollback.set_defaults(func=rollback, command_name="rollback")
 
     parser_reapply = subparsers.add_parser(
         "reapply",
-        parents=[global_parser, migration_parser],
+        parents=[global_parser, standard_options_parser, apply_parser],
         help="Reapply migrations",
     )
     parser_reapply.set_defaults(func=reapply, command_name="reapply")
 
     parser_mark = subparsers.add_parser(
         "mark",
-        parents=[global_parser, migration_parser],
+        parents=[global_parser, standard_options_parser, apply_parser],
         help="Mark migrations as applied, without running them",
     )
     parser_mark.set_defaults(func=mark, command_name="mark")
 
     parser_unmark = subparsers.add_parser(
         "unmark",
-        parents=[global_parser, migration_parser],
+        parents=[global_parser, standard_options_parser, apply_parser],
         help="Unmark applied migrations, without rolling them back",
     )
     parser_unmark.set_defaults(func=unmark, command_name="unmark")
