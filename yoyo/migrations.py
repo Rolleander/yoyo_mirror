@@ -144,12 +144,12 @@ class Migration(object):
 
     __all_migrations = {}
 
-    def __init__(self, id, path, source):
+    def __init__(self, id, path, source_dir):
         self.id = id
         self.hash = get_migration_hash(id)
         self.path = path
         self.steps = None
-        self.source = source
+        self.source_dir = source_dir
         self.use_transactions = True
         self._depends = None
         self.__all_migrations[id] = self
@@ -457,8 +457,8 @@ def read_migrations(*sources):
     Return a ``MigrationList`` containing all migrations from ``directory``.
     """
     migrations = MigrationList()
-    for source in sources:
-        package_match = re.match(r"^package:([^\s\/:]+):(.*)$", source)
+    for source_dir in sources:
+        package_match = re.match(r"^package:([^\s\/:]+):(.*)$", source_dir)
 
         if package_match:
             package_name = package_match.group(1)
@@ -476,7 +476,7 @@ def read_migrations(*sources):
         else:
             paths = [
                 os.path.join(directory, path)
-                for directory in glob(source)
+                for directory in glob(source_dir)
                 for path in os.listdir(directory)
                 if _is_migration_file(path)
             ]
@@ -494,7 +494,7 @@ def read_migrations(*sources):
             migration = migration_class(
                 os.path.splitext(os.path.basename(path))[0],
                 path,
-                source=source,
+                source_dir=source_dir,
             )
             if migration_class is PostApplyHookMigration:
                 migrations.post_apply.append(migration)
