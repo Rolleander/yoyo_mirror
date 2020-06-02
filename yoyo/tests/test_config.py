@@ -170,3 +170,14 @@ class TestInheritance:
             },
             {"DEFAULT": {"w": "a", "x": "b", "y": "c", "z": "c"}},
         )
+
+
+def test_it_interpolates_environment_variables():
+    os.environ["yoyo_test_env_var"] = "foo"
+    try:
+        _test_files(
+            {"a.ini": "[DEFAULT]\nx=%(yoyo_test_env_var)s"},
+            {"DEFAULT": {"x": "foo"}},
+        )
+    finally:
+        del os.environ["yoyo_test_env_var"]

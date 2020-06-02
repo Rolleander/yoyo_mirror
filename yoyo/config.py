@@ -42,12 +42,30 @@ class CircularReferenceError(configparser.Error):
     """
 
 
-def get_interpolation_defaults(path):
-    return {"here": os.path.dirname(os.path.abspath(path))}
+class CustomInterpolation(configparser.BasicInterpolation):
+
+    defaults: Dict[str, str]
+
+    def __init__(self, defaults):
+        self.defaults = defaults or {}
+
+    def before_get(self, parser, section, option, value, defaults):
+        merged_defaults = self.defaults.copy()
+        merged_defaults.update(defaults)
+        return super(CustomInterpolation, self).before_get(
+            parser, section, option, value, merged_defaults
+        )
 
 
-def get_configparser(**defaults) -> ConfigParser:
-    return ConfigParser(defaults=defaults)
+def get_interpolation_defaults(path: Optional[str] = None):
+    defaults = dict(os.environ)
+    if path:
+        defaults["here"] = os.path.dirname(os.path.abspath(path))
+    return defaults
+
+
+def get_configparser(defaults=None) -> ConfigParser:
+    return ConfigParser(interpolation=CustomInterpolation(defaults))
 
 
 def update_argparser_defaults(parser, defaults):
@@ -69,7 +87,7 @@ def read_config(src: Optional[str]) -> ConfigParser:
     ConfigParse object if ``path`` is ``None``.
     """
     if src is None:
-        return get_configparser()
+        return get_configparser(get_interpolation_defaults())
 
     path = _make_path(src)
     config = _read_config(path)
@@ -125,7 +143,7 @@ def _make_path(s: str, basepath: Optional[Path] = None) -> Path:
 
 
 def _read_config(path: Path) -> ConfigParser:
-    config = get_configparser(**get_interpolation_defaults(path))
+    config = get_configparser(get_interpolation_defaults(str(path)))
     config.read([path])
     return config
 
