@@ -25,8 +25,6 @@ import subprocess
 import sys
 import traceback
 
-from text_unidecode import unidecode
-
 from yoyo import default_migration_table
 from yoyo.config import CONFIG_NEW_MIGRATION_COMMAND_KEY
 from yoyo.migrations import read_migrations, heads, Migration
@@ -131,7 +129,7 @@ def new_migration(args, config):
 
 
 def slugify(message):
-    s = unidecode(message)
+    s = utils.unidecode(message)
     s = re.sub(re.compile(r"[^-a-z0-9]+"), "-", s.lower())
     s = re.compile(r"-{2,}").sub("-", s).strip("-")
     return s

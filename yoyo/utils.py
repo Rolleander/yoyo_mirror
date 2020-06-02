@@ -19,6 +19,7 @@ import random
 import re
 import string
 import sys
+import unicodedata
 
 from yoyo.config import CONFIG_EDITOR_KEY
 
@@ -168,3 +169,13 @@ def change_param_style(target_style, sql, bind_parameters):
             positional_params.append(bind_parameters[param_name])
         return transformed_sql, tuple(positional_params)
     return transformed_sql, bind_parameters
+
+
+def unidecode(s: str) -> str:
+    """
+    Return ``s`` with unicode diacritics removed.
+    """
+    combining = unicodedata.combining
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s) if not combining(c)
+    )
