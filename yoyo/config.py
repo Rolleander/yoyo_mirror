@@ -15,23 +15,39 @@
 """
 Handle config file and argument parsing
 """
+from collections import deque
+from configparser import ConfigParser
+from pathlib import Path
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
+import configparser
+import functools
+import itertools
 import os
-import iniherit
-import sys
 
 CONFIG_FILENAME = "yoyo.ini"
 CONFIG_EDITOR_KEY = "editor"
 CONFIG_NEW_MIGRATION_COMMAND_KEY = "post_create_command"
+
+INHERIT = "%inherit"
+INCLUDE = "%include"
+
+
+class CircularReferenceError(configparser.Error):
+    """
+    %include or %inherit directive has created a circular reference.
+    """
 
 
 def get_interpolation_defaults(path):
     return {"here": os.path.dirname(os.path.abspath(path))}
 
 
-def get_configparser(**defaults):
-    if sys.version_info < (3, 2, 0):
-        return iniherit.SafeConfigParser(defaults=defaults)
-    return iniherit.ConfigParser(defaults=defaults)
+def get_configparser(**defaults) -> ConfigParser:
+    return ConfigParser(defaults=defaults)
 
 
 def update_argparser_defaults(parser, defaults):
@@ -47,16 +63,106 @@ def update_argparser_defaults(parser, defaults):
     )
 
 
-def read_config(path):
+def read_config(src: Optional[str]) -> ConfigParser:
     """
     Read the configuration file at ``path``, or return an empty
     ConfigParse object if ``path`` is ``None``.
     """
-    if path is None:
+    if src is None:
         return get_configparser()
+
+    path = _make_path(src)
+    config = _read_config(path)
+    config_files = {path: config}
+    merge_paths = deque([path])
+    to_process: List[Tuple[Union[Tuple, Tuple[Path]], Path, ConfigParser]] = [
+        ((), path, config)
+    ]
+    while to_process:
+        ancestors, path, config = to_process.pop()
+        inherits, includes = find_includes(path, config)
+        for p in itertools.chain(inherits, includes):
+            if p in ancestors:
+                raise CircularReferenceError(
+                    "{path!r} contains circular references".format(path=path)
+                )
+            config = _read_config(p)
+            config_files[p] = config
+            to_process.append((ancestors + (path,), p, config))
+
+        merge_paths.extendleft(inherits)
+        merge_paths.extend(includes)
+
+    merged = merge_configs([config_files[p] for p in merge_paths])
+    merged.remove_option("DEFAULT", INCLUDE)
+    merged.remove_option("DEFAULT", INHERIT)
+
+    return merged
+
+
+def _make_path(s: str, basepath: Optional[Path] = None) -> Path:
+    """
+    Return a fully resolved Path. Raises FileNotFoundError if the path does not
+    exist.
+
+    """
+    if basepath:
+        p = basepath.parent / s
+    else:
+        p = Path(s)
+
+    # Path.resolve has a backward incompatible change in Python 3.6
+    #
+    # py35: will raise FileNotFoundError if the path doesn't exist.
+    # py36: does not raise FileNotFoundError, unless you pass strict=True
+    #
+    # Passing strict=True would cause a TypeError in Python 3.5, we
+    # have to do an explicit exists() check to support both versions.
+    p = p.resolve()
+    if not p.exists():
+        raise FileNotFoundError(p)
+    return p.resolve()
+
+
+def _read_config(path: Path) -> ConfigParser:
     config = get_configparser(**get_interpolation_defaults(path))
     config.read([path])
     return config
+
+
+def find_includes(
+    basepath: Path, config: ConfigParser
+) -> Tuple[List[Path], List[Path]]:
+
+    result: Dict[str, List[Path]] = {INCLUDE: [], INHERIT: []}
+    for key in [INHERIT, INCLUDE]:
+        try:
+            paths = config["DEFAULT"][key].split()
+        except KeyError:
+            continue
+
+        for p in paths:
+            strict = True
+            if p.startswith("?"):
+                strict = False
+                p = p[1:]
+            try:
+                path = _make_path(p, basepath)
+            except FileNotFoundError:
+                if strict:
+                    raise
+                continue
+
+            result[key].append(path)
+    return result[INHERIT], result[INCLUDE]
+
+
+def merge_configs(configs: List[ConfigParser],) -> ConfigParser:
+    def merge(c1, c2):
+        c1.read_dict(c2)
+        return c1
+
+    return functools.reduce(merge, configs[1:], configs[0])
 
 
 def save_config(config, path):
