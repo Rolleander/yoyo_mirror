@@ -13,8 +13,11 @@
 # limitations under the License.
 
 import argparse
+import sys
 import re
 import warnings
+
+import tabulate
 
 from yoyo import (
     read_migrations,
@@ -22,6 +25,7 @@ from yoyo import (
     ancestors,
     descendants,
 )
+from yoyo.migrations import topological_sort
 from yoyo.scripts.main import InvalidArgument, get_backend
 from yoyo import utils
 
@@ -98,6 +102,15 @@ def install_argparsers(global_parser, subparsers):
     )
     parser_apply.set_defaults(func=apply, command_name="apply")
 
+    parser_list = subparsers.add_parser(
+        "list",
+        description="List all available and applied migrations. "
+        "Each listed migration is prefixed with either A (applied) or U "
+        "(unapplied)",
+        parents=[global_parser, standard_options_parser, filter_parser],
+    )
+    parser_list.set_defaults(func=list_migrations, command_name="list")
+
     parser_rollback = subparsers.add_parser(
         "rollback",
         parents=[global_parser, standard_options_parser, apply_parser],
@@ -139,6 +152,50 @@ def install_argparsers(global_parser, subparsers):
     )
 
 
+def filter_migrations(migrations, pattern):
+
+    if not pattern:
+        return migrations
+
+    search = re.compile(pattern).search
+    return migrations.filter(lambda m: search(m.id) is not None)
+
+
+def migrations_to_revision(migrations, revision, direction):
+    if not revision:
+        return migrations
+    assert direction in {"apply", "rollback"}
+
+    targets = [m for m in migrations if revision in m.id]
+    if len(targets) == 0:
+        raise InvalidArgument(
+            "'{}' doesn't match any revisions.".format(revision)
+        )
+    if len(targets) > 1:
+        raise InvalidArgument(
+            "'{}' matches multiple revisions. "
+            "Please specify one of {}.".format(
+                revision, ", ".join(m.id for m in targets)
+            )
+        )
+
+    target = targets[0]
+
+    # apply: apply target an all its dependencies
+    if direction == "apply":
+        deps = ancestors(target, migrations)
+        target_plus_deps = deps | {target}
+        migrations = migrations.filter(lambda m: m in target_plus_deps)
+
+    # rollback/reapply: rollback target and everything that depends on it
+    else:
+        deps = descendants(target, migrations)
+        target_plus_deps = deps | {target}
+        migrations = migrations.filter(lambda m: m in target_plus_deps)
+
+    return migrations
+
+
 def get_migrations(args, backend):
 
     sources = args.sources
@@ -147,46 +204,15 @@ def get_migrations(args, backend):
     if not sources:
         raise InvalidArgument("Please specify the migration source directory")
 
+    direction = "apply" if args.func in {mark, apply} else "rollback"
     migrations = read_migrations(*sources)
+    migrations = filter_migrations(migrations, args.match)
+    migrations = migrations_to_revision(migrations, args.revision, direction)
 
-    if args.match:
-        migrations = migrations.filter(
-            lambda m: re.search(args.match, m.id) is not None
-        )
-
-    if args.revision:
-        targets = [m for m in migrations if args.revision in m.id]
-        if len(targets) == 0:
-            raise InvalidArgument(
-                "'{}' doesn't match any revisions.".format(args.revision)
-            )
-        if len(targets) > 1:
-            raise InvalidArgument(
-                "'{}' matches multiple revisions. "
-                "Please specify one of {}.".format(
-                    args.revision, ", ".join(m.id for m in targets)
-                )
-            )
-
-        target = targets[0]
-
-        # apply: apply target an all its dependencies
-        if args.func in {mark, apply}:
-            deps = ancestors(target, migrations)
-            target_plus_deps = deps | {target}
-            migrations = migrations.filter(lambda m: m in target_plus_deps)
-
-        # rollback/reapply: rollback target and everything that depends on it
-        else:
-            deps = descendants(target, migrations)
-            target_plus_deps = deps | {target}
-            migrations = migrations.filter(lambda m: m in target_plus_deps)
+    if direction == "apply":
+        migrations = backend.to_apply(migrations)
     else:
-        if args.func in {apply, mark}:
-            migrations = backend.to_apply(migrations)
-
-        elif args.func in {rollback, reapply, unmark}:
-            migrations = backend.to_rollback(migrations)
+        migrations = backend.to_rollback(migrations)
 
     if not args.batch_mode and not args.revision:
         migrations = prompt_migrations(backend, migrations, args.command_name)
@@ -266,6 +292,27 @@ def unmark(args, config):
 def break_lock(args, config):
     backend = get_backend(args, config)
     backend.break_lock()
+
+
+def list_migrations(args, config):
+    backend = get_backend(args, config)
+    migrations = read_migrations(*args.sources)
+    migrations = filter_migrations(migrations, args.match)
+
+    APPLIED, UNAPPLIED = "A", "U"
+    if sys.stdout.isatty():
+        APPLIED = f"\033[92m{APPLIED}\033[0m"
+        UNAPPLIED = f"\033[91m{UNAPPLIED}\033[0m"
+
+    with backend.lock():
+        migrations = migrations.__class__(topological_sort(migrations))
+        applied = backend.to_rollback(migrations)
+
+        data = (
+            (APPLIED if m in applied else UNAPPLIED, m.id, m.source_dir)
+            for m in migrations
+        )
+        print(tabulate.tabulate(data, headers=("STATUS", "ID", "SOURCE")))
 
 
 def prompt_migrations(backend, migrations, direction):
@@ -355,6 +402,4 @@ def prompt_migrations(backend, migrations, direction):
                 mig.choice = "n"
             break
 
-    return migrations.replace(
-        m.migration for m in to_prompt if m.choice == "y"
-    )
+    return migrations.replace(m.migration for m in to_prompt if m.choice == "y")
