@@ -13,9 +13,9 @@ def upgrade(backend):
     cursor = backend.execute(
         "SELECT id, ctime FROM {}".format(backend.migration_table_quoted)
     )
-    migration_id: str
-    created_at: datetime
-    for migration_id, created_at in iter(cursor.fetchone, None):
+    migration_id = ""  # type: str
+    created_at = datetime(1970, 1, 1)  # type: datetime
+    for migration_id, created_at in iter(cursor.fetchone, None):  # type: ignore
         migration_hash = get_migration_hash(migration_id)
         log_data = dict(
             backend.get_log_data(),

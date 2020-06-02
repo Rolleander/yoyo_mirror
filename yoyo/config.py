@@ -44,7 +44,7 @@ class CircularReferenceError(configparser.Error):
 
 class CustomInterpolation(configparser.BasicInterpolation):
 
-    defaults: Dict[str, str]
+    defaults = {}  # type:  Dict[str, str]
 
     def __init__(self, defaults):
         self.defaults = defaults or {}
@@ -93,9 +93,9 @@ def read_config(src: Optional[str]) -> ConfigParser:
     config = _read_config(path)
     config_files = {path: config}
     merge_paths = deque([path])
-    to_process: List[Tuple[Union[Tuple, Tuple[Path]], Path, ConfigParser]] = [
+    to_process = [
         ((), path, config)
-    ]
+    ]  # type: List[Tuple[Union[Tuple, Tuple[Path]], Path, ConfigParser]]
     while to_process:
         ancestors, path, config = to_process.pop()
         inherits, includes = find_includes(path, config)
@@ -152,7 +152,7 @@ def find_includes(
     basepath: Path, config: ConfigParser
 ) -> Tuple[List[Path], List[Path]]:
 
-    result: Dict[str, List[Path]] = {INCLUDE: [], INHERIT: []}
+    result = {INCLUDE: [], INHERIT: []}  # type: Dict[str, List[Path]]
     for key in [INHERIT, INCLUDE]:
         try:
             paths = config["DEFAULT"][key].split()

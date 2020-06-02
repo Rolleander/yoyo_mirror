@@ -26,8 +26,8 @@ from itertools import zip_longest
 from logging import getLogger
 from typing import Dict
 from typing import List
-from typing import Tuple
 from typing import Mapping
+from typing import Tuple
 import hashlib
 import importlib.util
 import os
@@ -49,7 +49,9 @@ default_migration_table = "_yoyo_migration"
 
 hash_function = hashlib.sha256
 
-_collectors: Mapping[str, "StepCollector"] = weakref.WeakValueDictionary()
+_collectors = (
+    weakref.WeakValueDictionary()
+)  # type: Mapping[str, "StepCollector"]
 
 
 def _is_migration_file(path):
@@ -98,7 +100,7 @@ def parse_metadata_from_sql_comments(
 
     lineending = re.search(r"\n|\r\n|\r", s + "\n").group(0)  # type: ignore
     lines = iter(s.split(lineending))
-    directives: DirectivesType = {}
+    directives = {}  # type: DirectivesType
     leading_comments = []
     sql = []
     for line in lines:
@@ -126,7 +128,7 @@ def parse_metadata_from_sql_comments(
 def read_sql_migration(
     path: str,
 ) -> Tuple[DirectivesType, LeadingCommentType, List[str]]:
-    directives: DirectivesType = {}
+    directives = {}  # type: DirectivesType
     leading_comment = ""
     statements = []
     if os.path.exists(path):
@@ -145,7 +147,7 @@ def read_sql_migration(
 
 class Migration(object):
 
-    __all_migrations: Dict[str, "Migration"] = {}
+    __all_migrations = {}  # type: Dict[str, "Migration"]
 
     def __init__(self, id, path):
         self.id = id
@@ -519,7 +521,7 @@ class MigrationList(MutableSequence):
         return "{}({})".format(self.__class__.__name__, repr(self.items))
 
     def check_conflicts(self):
-        c: Dict[str, int] = Counter()
+        c = Counter()  # type: Dict[str, int]
         for item in self:
             c[item.id] += 1
             if c[item.id] > 1:
@@ -598,7 +600,9 @@ class StepCollector(object):
             wrapper = (
                 TransactionWrapper if use_transactions else Transactionless
             )
-            t: StepBase = MigrationStep(next(self.step_id), apply, rollback)
+            t = MigrationStep(
+                next(self.step_id), apply, rollback
+            )  # type: StepBase
             t = wrapper(t, ignore_errors)
             return t
 
@@ -731,12 +735,12 @@ def topological_sort(migration_list):
     # Track graph edges in two parallel data structures.
     # Use OrderedDict so that we can traverse edges in order
     # and keep the sort stable
-    forward_edges: Dict[Migration, Dict[Migration, int]] = defaultdict(
+    forward_edges = defaultdict(
         OrderedDict
-    )
-    backward_edges: Dict[Migration, Dict[Migration, int]] = defaultdict(
+    )  # type: Dict[Migration, Dict[Migration, int]]
+    backward_edges = defaultdict(
         OrderedDict
-    )
+    )  # type: Dict[Migration, Dict[Migration, int]]
 
     for m in migration_list:
         for n in m.depends:
