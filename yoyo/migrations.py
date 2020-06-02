@@ -27,6 +27,7 @@ from logging import getLogger
 from typing import Dict
 from typing import List
 from typing import Tuple
+from typing import Mapping
 import hashlib
 import importlib.util
 import os
@@ -48,7 +49,7 @@ default_migration_table = "_yoyo_migration"
 
 hash_function = hashlib.sha256
 
-_collectors = weakref.WeakValueDictionary()
+_collectors: Mapping[str, "StepCollector"] = weakref.WeakValueDictionary()
 
 
 def _is_migration_file(path):
@@ -95,9 +96,9 @@ def parse_metadata_from_sql_comments(
         )
     )
 
-    lineending = re.search(r"\n|\r\n|\r", s + "\n").group(0)
+    lineending = re.search(r"\n|\r\n|\r", s + "\n").group(0)  # type: ignore
     lines = iter(s.split(lineending))
-    directives = {}
+    directives: DirectivesType = {}
     leading_comments = []
     sql = []
     for line in lines:
@@ -125,7 +126,7 @@ def parse_metadata_from_sql_comments(
 def read_sql_migration(
     path: str,
 ) -> Tuple[DirectivesType, LeadingCommentType, List[str]]:
-    directives = {}
+    directives: DirectivesType = {}
     leading_comment = ""
     statements = []
     if os.path.exists(path):
@@ -144,7 +145,7 @@ def read_sql_migration(
 
 class Migration(object):
 
-    __all_migrations = {}
+    __all_migrations: Dict[str, "Migration"] = {}
 
     def __init__(self, id, path):
         self.id = id
@@ -177,17 +178,18 @@ class Migration(object):
         if self.loaded:
             return
 
-        collector = _collectors[self.path] = StepCollector(migration=self)
+        collector = StepCollector(migration=self)
+        _collectors[self.path] = collector
         if self.is_raw_sql():
             self.module = types.ModuleType(self.path)
         else:
             spec = importlib.util.spec_from_file_location(self.path, self.path)
             self.module = importlib.util.module_from_spec(spec)
 
-        self.module.step = collector.add_step
-        self.module.group = collector.add_step_group
-        self.module.transaction = collector.add_step_group
-        self.module.collector = collector
+        self.module.step = collector.add_step  # type: ignore
+        self.module.group = collector.add_step_group  # type: ignore
+        self.module.transaction = collector.add_step_group  # type: ignore
+        self.module.collector = collector  # type: ignore
         if self.is_raw_sql():
             directives, leading_comment, statements = read_sql_migration(
                 self.path
@@ -201,12 +203,12 @@ class Migration(object):
             )
 
             for s, r in statements_with_rollback:
-                self.module.collector.add_step(s, r)
+                self.module.collector.add_step(s, r)  # type: ignore
             self.module.__doc__ = leading_comment
-            self.module.__transactional__ = {"true": True, "false": False}[
+            self.module.__transactional__ = {"true": True, "false": False}[  # type: ignore
                 directives.get("transactional", "true").lower()
             ]
-            self.module.__depends__ = {
+            self.module.__depends__ = {  # type: ignore
                 d for d in directives.get("depends", "").split() if d
             }
 
@@ -237,7 +239,7 @@ class Migration(object):
 
         steps = self.steps
         if direction == "rollback":
-            steps = reversed(steps)
+            steps = reversed(steps)  # type: ignore
 
         executed_steps = []
         if self.use_transactions:
@@ -267,7 +269,8 @@ class Migration(object):
                             logger.exception(
                                 "Could not %s step %s", direction, step.id
                             )
-                    raise exc_info[1].with_traceback(exc_info[2])
+                    if exc_info[1]:
+                        raise exc_info[1].with_traceback(exc_info[2])
 
 
 class PostApplyHookMigration(Migration):
@@ -487,10 +490,9 @@ def read_migrations(*sources):
                 continue
             filename = os.path.splitext(os.path.basename(path))[0]
 
+            migration_class = Migration
             if filename.startswith("post-apply"):
                 migration_class = PostApplyHookMigration
-            else:
-                migration_class = Migration
 
             migration = migration_class(
                 os.path.splitext(os.path.basename(path))[0], path
@@ -517,7 +519,7 @@ class MigrationList(MutableSequence):
         return "{}({})".format(self.__class__.__name__, repr(self.items))
 
     def check_conflicts(self):
-        c = Counter()
+        c: Dict[str, int] = Counter()
         for item in self:
             c[item.id] += 1
             if c[item.id] > 1:
@@ -532,7 +534,7 @@ class MigrationList(MutableSequence):
         removing = self.items[n]
         if not isinstance(removing, list):
             remove_ids = set([item.id for item in removing])
-            new_ids = [ob.id]
+            new_ids = {ob.id}
         else:
             remove_ids = set(item.id for item in removing)
             new_ids = {item.id for item in ob}
@@ -596,7 +598,7 @@ class StepCollector(object):
             wrapper = (
                 TransactionWrapper if use_transactions else Transactionless
             )
-            t = MigrationStep(next(self.step_id), apply, rollback)
+            t: StepBase = MigrationStep(next(self.step_id), apply, rollback)
             t = wrapper(t, ignore_errors)
             return t
 
@@ -729,8 +731,12 @@ def topological_sort(migration_list):
     # Track graph edges in two parallel data structures.
     # Use OrderedDict so that we can traverse edges in order
     # and keep the sort stable
-    forward_edges = defaultdict(OrderedDict)
-    backward_edges = defaultdict(OrderedDict)
+    forward_edges: Dict[Migration, Dict[Migration, int]] = defaultdict(
+        OrderedDict
+    )
+    backward_edges: Dict[Migration, Dict[Migration, int]] = defaultdict(
+        OrderedDict
+    )
 
     for m in migration_list:
         for n in m.depends:

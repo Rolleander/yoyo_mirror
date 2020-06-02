@@ -3,6 +3,7 @@ Version 2 schema.
 
 Compatible with yoyo-migrations >=  6.0
 """
+from datetime import datetime
 from yoyo.migrations import get_migration_hash
 
 
@@ -12,6 +13,8 @@ def upgrade(backend):
     cursor = backend.execute(
         "SELECT id, ctime FROM {}".format(backend.migration_table_quoted)
     )
+    migration_id: str
+    created_at: datetime
     for migration_id, created_at in iter(cursor.fetchone, None):
         migration_hash = get_migration_hash(migration_id)
         log_data = dict(

@@ -103,11 +103,11 @@ def new_migration(args, config):
     depends = sorted(heads(migrations), key=lambda m: m.id)
     if args.sql:
         template = migration_sql_template
-        depends = "  ".join(m.id for m in depends)
+        depends_str = "  ".join(m.id for m in depends)
     else:
         template = migration_template
-        depends = ", ".join("{!r}".format(m.id) for m in depends)
-    migration_source = template.format(message=message, depends=depends)
+        depends_str = ", ".join("{!r}".format(m.id) for m in depends)
+    migration_source = template.format(message=message, depends=depends_str)
 
     extension = ".sql" if args.sql else ".py"
     if args.batch_mode:
@@ -167,9 +167,7 @@ def make_filename(config, directory, message, extension):
 
     return path.join(
         directory,
-        "{}{}_{}_{}{}{}".format(
-            prefix, datestr, number, rand, slug, extension
-        ),
+        "{}{}_{}_{}{}{}".format(prefix, datestr, number, rand, slug, extension),
     )
 
 

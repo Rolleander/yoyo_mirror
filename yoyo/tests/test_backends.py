@@ -251,6 +251,7 @@ class TestInitConnection(object):
         dburi = next(iter(get_test_dburis(only={"postgresql"})), None)
         if dburi is None:
             pytest.skip("PostgreSQL backend not available")
+            return
         backend = get_backend(dburi)
         with backend.transaction():
             backend.execute("CREATE SCHEMA foo")

@@ -144,7 +144,7 @@ def _make_path(s: str, basepath: Optional[Path] = None) -> Path:
 
 def _read_config(path: Path) -> ConfigParser:
     config = get_configparser(get_interpolation_defaults(str(path)))
-    config.read([path])
+    config.read([str(path)])
     return config
 
 

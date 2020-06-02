@@ -25,6 +25,16 @@ from yoyo.config import CONFIG_EDITOR_KEY
 try:
     import termios
 
+except ImportError:
+    try:
+        from msvcrt import getwch as getch  # type: ignore
+    except ImportError:
+        # some non Windows environments don't have termios (google cloud)
+        # running yoyo through the python sdk should not require `getch`
+        pass
+
+else:
+
     def getch():
         """
         Read a single character without echoing to the console and without
@@ -34,9 +44,9 @@ try:
         saved_attributes = termios.tcgetattr(fd)
         try:
             attributes = termios.tcgetattr(fd)  # get a fresh copy!
-            attributes[3] = attributes[3] & ~(termios.ICANON | termios.ECHO)
-            attributes[6][termios.VMIN] = 1
-            attributes[6][termios.VTIME] = 0
+            attributes[3] = attributes[3] & ~(termios.ICANON | termios.ECHO)  # type: ignore
+            attributes[6][termios.VMIN] = 1  # type: ignore
+            attributes[6][termios.VTIME] = 0  # type: ignore
             termios.tcsetattr(fd, termios.TCSANOW, attributes)
 
             a = sys.stdin.read(1)
@@ -44,15 +54,6 @@ try:
             # be sure to reset the attributes no matter what!
             termios.tcsetattr(fd, termios.TCSANOW, saved_attributes)
         return a
-
-
-except ImportError:
-    try:
-        from msvcrt import getwch as getch
-    except ImportError:
-        # some non Windows environments don't have termios (google cloud)
-        # running yoyo through the python sdk should not require `getch`
-        pass
 
 
 def prompt(prompt, options):
@@ -159,7 +160,7 @@ def change_param_style(target_style, sql, bind_parameters):
         r"(?=\W|$)"
     )
 
-    transformed_sql = pattern.sub(lambda match: param_gen(match.group(1)), sql)
+    transformed_sql = pattern.sub(lambda match: param_gen(match.group(1)), sql)  # type: ignore
     if positional:
         positional_params = []
         for match in pattern.finditer(sql):

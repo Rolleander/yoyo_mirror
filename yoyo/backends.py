@@ -111,8 +111,7 @@ class SavepointTransactionManager(TransactionManager):
 
 class DatabaseBackend(object):
 
-    driver_module = None
-    connection = None
+    driver_module: str
 
     log_table = "_yoyo_log"
     lock_table = "yoyo_lock"
@@ -198,6 +197,9 @@ class DatabaseBackend(object):
             unquoted = getattr(self, attrname.rsplit("_quoted")[0])
             return self.quote_identifier(unquoted)
         raise AttributeError(attrname)
+
+    def connect(self, dburi):
+        raise NotImplementedError()
 
     def quote_identifier(self, s):
         return '"{}"'.format(s)
@@ -413,9 +415,7 @@ class DatabaseBackend(object):
         """
         applied = self.get_applied_migration_hashes()
         ms = (m for m in migrations if m.hash not in applied)
-        return migrations.__class__(
-            topological_sort(ms), migrations.post_apply
-        )
+        return migrations.__class__(topological_sort(ms), migrations.post_apply)
 
     def to_rollback(self, migrations):
         """
@@ -641,7 +641,7 @@ class MySQLBackend(DatabaseBackend):
     def quote_identifier(self, identifier):
         sql_mode = self.execute("SHOW VARIABLES LIKE 'sql_mode'").fetchone()[1]
         if "ansi_quotes" in sql_mode.lower():
-            return super(MySQLBackend).quote_identifier(identifier)
+            return super(MySQLBackend, self).quote_identifier(identifier)
         return "`{}`".format(identifier)
 
 
@@ -700,9 +700,7 @@ class PostgresqlBackend(DatabaseBackend):
 
     def list_tables(self):
         current_schema = self.execute("SELECT current_schema").fetchone()[0]
-        return super(PostgresqlBackend, self).list_tables(
-            schema=current_schema
-        )
+        return super(PostgresqlBackend, self).list_tables(schema=current_schema)
 
 
 def get_dbapi_module(name):
