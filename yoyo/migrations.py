@@ -14,10 +14,9 @@
 
 from collections import Counter
 from collections import OrderedDict
+from collections import abc
 from collections import defaultdict
 from collections import deque
-from collections.abc import Iterable
-from collections.abc import MutableSequence
 from copy import copy
 from glob import glob
 from itertools import chain
@@ -25,6 +24,7 @@ from itertools import count
 from itertools import zip_longest
 from logging import getLogger
 from typing import Dict
+from typing import Iterable
 from typing import List
 from typing import Tuple
 import hashlib
@@ -452,36 +452,41 @@ class StepGroup(MigrationStep):
             item.rollback(backend, force)
 
 
-def read_migrations(*sources):
-    """
-    Return a ``MigrationList`` containing all migrations from ``directory``.
-    """
-    migrations = MigrationList()
-    for source_dir in sources:
-        package_match = re.match(r"^package:([^\s\/:]+):(.*)$", source_dir)
-
-        if package_match:
-            package_name = package_match.group(1)
-            resource_dir = package_match.group(2)
+def _expand_sources(sources) -> Iterable[Tuple[str, List[str]]]:
+    package_match = re.compile(r"^package:([^\s\/:]+):(.*)$").match
+    for source in sources:
+        mo = package_match(source)
+        if mo:
+            package_name = mo.group(1)
+            resource_dir = mo.group(2)
             paths = [
                 pkg_resources.resource_filename(
                     package_name, "{}/{}".format(resource_dir, f)
                 )
-                for f in pkg_resources.resource_listdir(
-                    package_name, resource_dir
+                for f in sorted(
+                    pkg_resources.resource_listdir(package_name, resource_dir)
                 )
                 if _is_migration_file(f)
             ]
-
+            yield (source, paths)
         else:
-            paths = [
-                os.path.join(directory, path)
-                for directory in glob(source_dir)
-                for path in os.listdir(directory)
-                if _is_migration_file(path)
-            ]
+            for directory in glob(source):
+                paths = [
+                    os.path.join(directory, path)
+                    for path in sorted(os.listdir(directory))
+                    if _is_migration_file(path)
+                ]
+                yield (directory, paths)
 
-        for path in sorted(paths):
+
+def read_migrations(*sources):
+    """
+    Return a ``MigrationList`` containing all migrations from ``sources``.
+    """
+    migrations = defaultdict(MigrationList)  # type: Dict[str, MigrationList]
+
+    for source, paths in _expand_sources(sources):
+        for path in paths:
             if path.endswith(".rollback.sql"):
                 continue
             filename = os.path.splitext(os.path.basename(path))[0]
@@ -494,23 +499,27 @@ def read_migrations(*sources):
             migration = migration_class(
                 os.path.splitext(os.path.basename(path))[0],
                 path,
-                source_dir=source_dir,
+                source_dir=source,
             )
             if migration_class is PostApplyHookMigration:
-                migrations.post_apply.append(migration)
+                migrations[source].post_apply.append(migration)
             else:
-                migrations.append(migration)
-    return migrations
+                migrations[source].append(migration)
+    merged_migrations = MigrationList(
+        chain(*migrations.values()),
+        chain(*(m.post_apply for m in migrations.values())),
+    )
+    return merged_migrations
 
 
-class MigrationList(MutableSequence):
+class MigrationList(abc.MutableSequence):
     """
     A list of database migrations.
     """
 
     def __init__(self, items=None, post_apply=None):
         self.items = list(items) if items else []
-        self.post_apply = post_apply if post_apply else []
+        self.post_apply = list(post_apply) if post_apply else []
         self.keys = set(item.id for item in self.items)
         self.check_conflicts()
 
@@ -618,7 +627,9 @@ class StepCollector(object):
             steps = kwargs["steps"]
         else:
             steps = list(
-                chain(*(s if isinstance(s, Iterable) else [s] for s in args))
+                chain(
+                    *(s if isinstance(s, abc.Iterable) else [s] for s in args)
+                )
             )
         for s in steps:
             del self.steps[s]
