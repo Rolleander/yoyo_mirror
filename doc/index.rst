@@ -17,24 +17,34 @@ They can be as simple as this:
 Command line usage
 ==================
 
-Start a new migration::
+Start a new migration:
+
+.. code:: shell
 
   yoyo new ./migrations -m "Add column to foo"
 
-Apply migrations from directory ``migrations`` to a PostgreSQL database::
+Apply migrations from directory ``migrations`` to a PostgreSQL database:
+
+.. code:: shell
 
    yoyo apply --database postgresql://scott:tiger@localhost/db ./migrations
 
-Rollback migrations previously applied to a MySQL database::
+Rollback migrations previously applied to a MySQL database:
+
+.. code:: shell
 
    yoyo rollback --database mysql://scott:tiger@localhost/database ./migrations
 
 Reapply (ie rollback then apply again) migrations to a SQLite database at
-location ``/home/sheila/important.db``::
+location ``/home/sheila/important.db``:
+
+.. code:: shell
 
     yoyo reapply --database sqlite:////home/sheila/important.db ./migrations
 
-View available migrations::
+List available migrations:
+
+.. code:: shell
 
     yoyo list --database sqlite:////home/sheila/important.db ./migrations
 
@@ -269,7 +279,9 @@ your command history when you have moved to a different directory).
 If you do not want a config file to be loaded
 add the ``--no-config`` parameter to the command line options.
 
-The configuration file may contain the following options::
+The configuration file may contain the following options:
+
+.. code:: ini
 
   [DEFAULT]
 
@@ -349,7 +361,9 @@ Sources
 --------
 
 Yoyo reads migration scripts from the directories specified in the ``sources``
-config option. Paths may include glob patterns, for example::
+config option. Paths may include glob patterns, for example:
+
+.. code:: ini
 
     [DEFAULT]
     sources =
@@ -358,7 +372,9 @@ config option. Paths may include glob patterns, for example::
 
 You may also read migrations from installed python packages, by supplying a
 path in the special form ``package:<package-name>:<path-to-migrations-dir>``,
-for example::
+for example:
+
+.. code:: ini
 
     [DEFAULT]
     sources = package:myapplication:data/migrations
