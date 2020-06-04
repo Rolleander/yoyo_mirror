@@ -298,7 +298,14 @@ The configuration file may contain the following options::
   prefix = myproject_
 
 
-Config file inheritance may be used to customize configuration per site::
+Config file inheritance and includes
+------------------------------------
+
+
+The special ``%inherit`` and ``%include`` directives allow config file inheritance and inclusion:
+
+
+.. code:: ini
 
   #
   # file: yoyo-defaults.ini
@@ -312,12 +319,31 @@ Config file inheritance may be used to customize configuration per site::
   [DEFAULT]
 
   ; Inherit settings from yoyo-defaults.ini
-  %inherit = %(here)s/yoyo-defaults.ini
+  ;
+  ; Settings in inherited files are processed first and may be overridden by
+  ; settings in this file
+  %inherit = yoyo-defaults.ini
+
+  ; Include settings from yoyo-local.ini
+  ;
+  ; Included files are processed after this file and may override the settings
+  ; in this file
+  %include = yoyo-local.ini
+
 
   ; Use '?' to avoid raising an error if the file does not exist
-  %inherit = ?%(here)s/yoyo-defaults.ini
+  %inherit = ?yoyo-defaults.ini
 
   database = sqlite:///%(here)s/mydb.sqlite
+
+Substitutions and environment variables
+---------------------------------------
+
+The special variable ``%(here)s`` will be substituted with the directory name
+of the config file.
+
+Environment variables can be substituted with the same syntax, eg ``%(HOME)s``.
+
 
 Sources
 --------
