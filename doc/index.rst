@@ -95,23 +95,115 @@ Migration files
 ===============
 
 The migrations directory contains a series of migration scripts. Each
-migration script is a python or SQL file (``.py`` or ``.sql``) containing a
-series of steps. Each step should comprise a migration query and (optionally) a
-rollback query:
+migration script is a Python (``.py``) or SQL file (``.sql``).
+
+The name of each file without the extension is used as the migration's unique
+identifier. You may include migrations from multiple sources, but
+identifiers are assumed to be globally unique, so it's wise to choose a unique
+prefix for you project (eg ``<project-name>-0001-migration.sql``) or use the
+``yoyo new`` command to generate a suitable filename.
+
+Migrations scripts are run in dependency then filename order.
+
+Each migration file is run in a single transaction where this is supported by
+the database.
+
+Yoyo creates tables in your target database to track which migrations have been
+applied. By default these are:
+
+- ``_yoyo_migration``
+- ``_yoyo_log``
+- ``_yoyo_version``
+- ``yoyo_lock``
+
+Migrations as Python scripts
+-----------------------------
+
+A migration script written in Python has the following structure:
 
 .. code:: python
 
     #
-    # file: migrations/0001.create-foo.py
+    # file: migrations/0001_create_foo.py
     #
     from yoyo import step
-    step(
-        "CREATE TABLE foo (id INT, bar VARCHAR(20), PRIMARY KEY (id))",
-        "DROP TABLE foo",
-    )
 
-An SQL migration script should only contain the SQL statements necessary to
-apply the migration:
+    __depends__ = {"0000.initial-schema"}
+
+    steps = [
+      step(
+          "CREATE TABLE foo (id INT, bar VARCHAR(20), PRIMARY KEY (id))",
+          "DROP TABLE foo",
+      ),
+      step(
+          "ALTER TABLE foo ADD COLUMN baz INT NOT NULL"
+      )
+    ]
+
+The ``step`` function may take up to 3 arguments:
+
+- ``apply``: an SQL query (or Python function, see below) to apply the migration step.
+- ``rollback``: (optional) an SQL query (or Python function) to rollback the migration step.
+- ``ignore_errors``: (optional, one of ``"apply"``, ``"rollback"`` or ``"all"``)
+  causes yoyo to ignore database errors in either the apply stage, rollback stage or both.
+
+Using Python functions to define migration steps
+`````````````````````````````````````````````````
+
+If an SQL query is not flexible enough, you may supply a Python function as
+either or both of the ``apply`` or ``rollback`` arguments of ``step``.
+Each function should take a database connection as its only argument:
+
+.. code:: python
+
+    #
+    # file: migrations/0001_create_foo.py
+    #
+    from yoyo import step
+
+    def apply_step(conn):
+        cursor = conn.cursor()
+        cursor.execute(
+            # query to perform the migration
+        )
+
+    def rollback_step(conn):
+        cursor = conn.cursor()
+        cursor.execute(
+            # query to undo the above
+        )
+
+    steps = [
+      step(apply_step, rollback_step)
+    ]
+
+Dependencies
+`````````````
+
+Migrations may declare dependencies on other migrations via the
+``__depends__`` attribute:
+
+.. code:: python
+
+    #
+    # file: migrations/0002.modify-foo.py
+    #
+    __depends__ = {'0000.initial-schema', '0001.create-foo'}
+
+    steps = [
+      # migration steps
+    ]
+
+
+If you use the ``yoyo new`` command the ``_depends__`` attribute will be auto
+populated for you.
+
+
+Migrations as SQL scripts
+-------------------------
+
+An SQL migration script files should be named ``<migration-name>.sql`` and contain the one or more
+SQL statements required to apply the migration.
 
 .. code:: sql
 
@@ -120,7 +212,8 @@ apply the migration:
     --
     CREATE TABLE foo (id INT, bar VARCHAR(20), PRIMARY KEY (id));
 
-SQL rollback steps should be saved in a separate file, named
+
+SQL rollback steps should be saved in a separate file named
 ``<migration-name>.rollback.sql``:
 
 .. code:: sql
@@ -131,74 +224,19 @@ SQL rollback steps should be saved in a separate file, named
     DROP TABLE foo;
 
 
-Migrations may also declare dependencies on earlier migrations via the
-``__depends__`` attribute:
+Dependencies
+`````````````
 
-.. code:: python
-
-    #
-    # file: migrations/0002.modify-foo.py
-    #
-    __depends__ = {'0000.initial-schema', '0001.create-foo'}
-
-    step(
-        "ALTER TABLE foo ADD baz INT",
-        "ALTER TABLE foo DROP baz",
-    )
-
-For SQL migrations you should use a structured comment specifying
+A structured SQL comment may be used to specify
 dependencies as a space separated list:
 
 .. code:: sql
 
     -- depends: 0000.initial-schema 0001.create-foo
-    ALTER TABLE foo ADD baz INT
 
-The filename of each file (without the extension) is used as migration's
-identifier. In the absence of a ``__depends__`` attribute, migrations
-are applied in filename order, so it's useful to name your files using a date
-(eg '20090115-xyz.py') or some other incrementing number.
+    ALTER TABLE foo ADD baz INT;
 
-yoyo creates a table in your target database, ``_yoyo_migration``, to
-track which migrations have been applied.
 
-Steps may also take an optional argument ``ignore_errors``, which must be one
-of ``apply``, ``rollback``, or ``all``. If in the previous example the table
-foo might have already been created by another means, we could add
-``ignore_errors='apply'`` to the step to allow the migrations to continue
-regardless:
-
-.. code:: python
-
-    #
-    # file: migrations/0001.create-foo.py
-    #
-    from yoyo import step
-    step(
-        "CREATE TABLE foo (id INT, bar VARCHAR(20), PRIMARY KEY (id))",
-        "DROP TABLE foo",
-        ignore_errors='apply',
-    )
-
-Steps can also be python functions taking a database connection as
-their only argument:
-
-.. code:: python
-
-    #
-    # file: migrations/0002.update-keys.py
-    #
-    from yoyo import step
-    def do_step(conn):
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO sysinfo "
-            " (osname, hostname, release, version, arch)"
-            " VALUES (%s, %s, %s, %s, %s %s)",
-            os.uname()
-        )
-
-    step(do_step)
 
 
 Post-apply hook
@@ -207,8 +245,10 @@ Post-apply hook
 It can be useful to have a script that is run after every successful migration.
 For example you could use this to update database permissions or re-create
 views.
-To do this, create a special migration file called ``post-apply.py``.
-This file should have the same format as any other migration file.
+
+To do this, create a special migration file called ``post-apply.py`` or
+``post-apply.sql``. This file should have the same format as any other
+migration file.
 
 
 Configuration file
@@ -218,7 +258,7 @@ Yoyo looks for a configuration file named ``yoyo.ini`` in the current working
 directory or any ancestor directory.
 
 If no configuration file is found ``yoyo`` will prompt you to
-create one, popuplated with the current command line args.
+create one, populated from the current command line arguments.
 
 Using a configuration file saves repeated typing,
 avoids your database username and password showing in process listings
@@ -352,6 +392,7 @@ This feature is only tested against the PostgreSQL and SQLite backends.
 
 PostgreSQL
 ``````````
+
 In PostgreSQL it is an error to run certain statements inside a transaction
 block. These include:
 
@@ -365,6 +406,7 @@ Using ``__transactional__ = False`` allows you to run these within a migration
 
 SQLite
 ```````
+
 In SQLite, the default transactional behavior may prevent other tools from
 accessing the database for the duration of the migration. Using
 ``__transactional__ = False`` allows you to work around this limitation.
