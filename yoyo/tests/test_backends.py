@@ -148,11 +148,19 @@ class TestConcurrency(object):
 
     # How long to lock for: long enough to allow a migration to be loaded and
     # started without unduly slowing down the test suite
-    lock_duration = 0.3
+    lock_duration = 0.5
 
-    def do_something_with_lock(self, dburi):
-        with get_backend(dburi).lock():
-            time.sleep(self.lock_duration)
+    def get_lock_sleeper(self, dburi):
+        """
+        Return a function that acquires the backend lock, then sleeps
+        """
+        backend = get_backend(dburi)
+
+        def lock_sleep():
+            with backend.lock():
+                time.sleep(self.lock_duration)
+
+        return lock_sleep
 
     def skip_if_not_concurrency_safe(self, backend):
         if (
@@ -166,8 +174,7 @@ class TestConcurrency(object):
             )
         if backend.driver.threadsafety < 1:
             pytest.skip(
-                "Concurrency tests not supported for "
-                "non-threadsafe backends"
+                "Concurrency tests not supported for non-threadsafe backends"
             )
 
     def test_lock(self, dburi):
@@ -177,7 +184,7 @@ class TestConcurrency(object):
         """
         backend = get_backend(dburi)
         self.skip_if_not_concurrency_safe(backend)
-        thread = Thread(target=partial(self.do_something_with_lock, dburi))
+        thread = Thread(target=self.get_lock_sleeper(dburi))
         t = time.time()
         thread.start()
 
@@ -196,7 +203,7 @@ class TestConcurrency(object):
         backend = get_backend(dburi)
         self.skip_if_not_concurrency_safe(backend)
 
-        thread = Thread(target=partial(self.do_something_with_lock, dburi))
+        thread = Thread(target=self.get_lock_sleeper(dburi))
         thread.start()
         # Give the thread time to acquire the lock, but not enough
         # to complete
