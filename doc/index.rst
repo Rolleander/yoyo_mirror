@@ -425,8 +425,7 @@ block. These include:
 .. code:: sql
 
     CREATE DATABASE ...
-    CREATE TABLE <foo>
-    ALTER TYPE <enum> ...
+    ALTER TYPE ... ADD VALUE
 
 Using ``__transactional__ = False`` allows you to run these within a migration
 
