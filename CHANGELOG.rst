@@ -1,3 +1,16 @@
+7.1.0 (unreleased)
+------------------
+
+* Add ``yoyo list`` command
+
+* Add support for substituting environment variables in the config file
+  (https://bitbucket.org/ollyc/yoyo/issues/55/migrations-and-rollbacks-are-both-being)
+
+* Add support for a new %include directive in config files
+
+* Bugfix: migrations are now grouped by source
+  (https://bitbucket.org/ollyc/yoyo/issues/54/migrations-and-rollbacks-are-both-being)
+
 7.0.2 (released 2020-03-09)
 ---------------------------
 
