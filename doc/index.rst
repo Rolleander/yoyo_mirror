@@ -34,6 +34,11 @@ location ``/home/sheila/important.db``::
 
     yoyo reapply --database sqlite:////home/sheila/important.db ./migrations
 
+View available migrations::
+
+    yoyo list --database sqlite:////home/sheila/important.db ./migrations
+
+
 By default, yoyo-migrations starts in an interactive mode, prompting you for
 each migration file before applying it, making it easy to preview which
 migrations to apply and rollback.

@@ -507,6 +507,19 @@ class TestReadMigrations(object):
         with pytest.raises(exceptions.BadMigration):
             check("-- depends: true\nSELECT 1", set())
 
+    def test_it_does_not_mix_up_migrations_from_different_sources(self):
+        backend = get_backend(dburi)
+        with migrations_dir(**{"1.sql": "", "3.sql": ""}) as t1, migrations_dir(
+            **{"2.sql": "", "4.sql": ""}
+        ) as t2:
+            migrations = read_migrations(t1, t2)
+            assert [m.id for m in backend.to_apply(migrations)] == [
+                "1",
+                "3",
+                "2",
+                "4",
+            ]
+
 
 class TestPostApplyHooks(object):
     def test_post_apply_hooks_are_run_every_time(self):
@@ -527,9 +540,7 @@ class TestPostApplyHooks(object):
                 return cursor.fetchone()[0]
 
             def _apply_migrations():
-                backend.apply_migrations(
-                    backend.to_apply(read_migrations(tmp))
-                )
+                backend.apply_migrations(backend.to_apply(read_migrations(tmp)))
 
             # Should apply migration 'a' and call the post-apply hook
             _apply_migrations()
@@ -566,9 +577,7 @@ class TestPostApplyHooks(object):
     )
     def test_apply_migrations_only_does_not_run_hooks(self, tmpdir):
         backend = get_backend(dburi)
-        backend.apply_migrations_only(
-            backend.to_apply(read_migrations(tmpdir))
-        )
+        backend.apply_migrations_only(backend.to_apply(read_migrations(tmpdir)))
         cursor = backend.cursor()
         cursor.execute("SELECT * FROM postapply")
         assert cursor.fetchall() == []

@@ -537,3 +537,16 @@ class TestNewMigration(TestInteractiveScript):
 
                 """
             )
+
+
+class TestList(TestInteractiveScript):
+    def get_output(self, migrations):
+        with with_migrations(**migrations) as tmpdir:
+            with patch("sys.stdout", io.StringIO()) as captured:
+                main(["list", tmpdir, "--database", dburi])
+            return captured.getvalue()
+
+    def test_it_lists_migrations(self, tmpdir):
+        output = self.get_output({"m1": "", "m2": ""})
+        assert re.search(r"^U\s+m1", output, re.M)
+        assert re.search(r"^U\s+m2", output, re.M)

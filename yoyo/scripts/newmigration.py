@@ -195,7 +195,7 @@ def create_with_editor(config, directory, migration_source, extension):
                     return None
 
             try:
-                migration = Migration(None, tmpfile.name)
+                migration = Migration(None, tmpfile.name, None)
                 migration.load()
                 message = getattr(migration.module, "__doc__", "")
                 break
