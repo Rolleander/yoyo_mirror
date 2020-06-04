@@ -11,6 +11,9 @@
 * Bugfix: migrations are now grouped by source
   (https://bitbucket.org/ollyc/yoyo/issues/54/migrations-and-rollbacks-are-both-being)
 
+* Bugfix: viewing migration source in interactive mode no longer raises an
+  exception
+
 7.0.2 (released 2020-03-09)
 ---------------------------
 
