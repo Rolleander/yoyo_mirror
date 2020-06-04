@@ -154,6 +154,7 @@ class Migration(object):
         self.hash = get_migration_hash(id)
         self.path = path
         self.steps = None
+        self.source = None
         self.source_dir = source_dir
         self.use_transactions = True
         self._depends = None
@@ -183,6 +184,9 @@ class Migration(object):
 
         collector = StepCollector(migration=self)
         _collectors[self.path] = collector
+        with open(self.path, "r") as f:
+            self.source = f.read()
+
         if self.is_raw_sql():
             self.module = types.ModuleType(self.path)
         else:
