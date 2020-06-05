@@ -1,4 +1,3 @@
-from functools import partial
 from tempfile import NamedTemporaryFile
 from threading import Thread
 import time
