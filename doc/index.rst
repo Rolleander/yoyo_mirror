@@ -482,6 +482,58 @@ The following example shows how to apply migrations from inside python code:
    :maxdepth: 2
    :caption: Contents:
 
+Contributing
+=============
+
+Pull requests
+-------------
+
+Yoyo-migrations is developed on sourcehut and uses a mailing list to review
+commits for inclusion into the project.
+
+To send commits to the mailing list:
+
+1. Clone the repository: ``hg clone https://hg.sr.ht/~olly/yoyo``
+2. Take care to commit your work in logically separate changes. Use ``hg commit -i`` to commit your work in logically separate changes. Make sure each commit has a meaningful message.
+3. When you are ready to send your commits, use ``hg config --edit`` to add the
+   following lines to your user Mercurial configuration file:
+
+  .. code:: ini
+
+     [extensions]
+     patchbomb =
+
+     [email]
+     from = Your Name <you@example.org>
+     method = smtp
+
+     [smtp]
+     host = mail.example.org
+     port = 587
+     tls = smtps
+     username = you@example.org
+
+  Then use ``hg config --local`` to add the following lines to the repository configuration file:
+
+  .. code:: ini
+
+     [email]
+     to = <~olly/yoyo@lists.sr.ht>
+
+4. Run ``hg mail -o`` to send your commits by email. This command will send all your commits; if you want to send just a subset, refer to the `hg email docs <https://www.mercurial-scm.org/doc/hg.1.html#email>`_.
+
+
+For more detailed instructions, see here: https://man.sr.ht/hg.sr.ht/email.md
+
+
+Mailing list
+------------
+
+The mailing list archives can be found here: https://lists.sr.ht/~olly/yoyo.
+
+
+
+
 Changelog
 =========
 
