@@ -23,7 +23,7 @@ def _test_files(files, expected):
         os.chdir(tmpdir)
         try:
             config = yoyo.config.read_config(
-                str(tmpdir_path / next(iter(files)))
+                str(tmpdir_path / next(iter(sorted(files))))
             )
         finally:
             os.chdir(saved)

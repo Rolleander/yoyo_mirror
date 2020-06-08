@@ -494,7 +494,7 @@ def read_migrations(*sources):
     """
     Return a ``MigrationList`` containing all migrations from ``sources``.
     """
-    migrations = defaultdict(MigrationList)  # type: Dict[str, MigrationList]
+    migrations = OrderedDict()  # type: Dict[str, MigrationList]
 
     for source, paths in _expand_sources(sources):
         for path in paths:
@@ -511,10 +511,11 @@ def read_migrations(*sources):
                 path,
                 source_dir=source,
             )
+            ml = migrations.setdefault(source, MigrationList())
             if migration_class is PostApplyHookMigration:
-                migrations[source].post_apply.append(migration)
+                ml.post_apply.append(migration)
             else:
-                migrations[source].append(migration)
+                ml.append(migration)
     merged_migrations = MigrationList(
         chain(*migrations.values()),
         chain(*(m.post_apply for m in migrations.values())),
