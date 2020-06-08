@@ -1,6 +1,8 @@
 Yoyo database migrations
 ########################
 
+`Source repository <https://hg.sr.ht/~olly/yoyo>`_ · `Issue tracker <https://bitbucket.org/ollyc/yoyo/issues>`_
+
 Yoyo is a database schema migration tool. Migrations are written as
 SQL files or Python scripts that define a list of migration steps.
 They can be as simple as this:
@@ -15,6 +17,18 @@ They can be as simple as this:
           "DROP TABLE foo"
       )
    ]
+
+
+Installation
+==================
+
+Install yoyo-migrations using from the PyPI, for example:
+
+.. code:: shell
+
+   pip install yoyo-migrations
+
+
 
 Command line usage
 ==================
@@ -484,6 +498,16 @@ The following example shows how to apply migrations from inside python code:
 
 Contributing
 =============
+
+Report an issue
+----------------
+
+Use the yoyo-migrations `issue tracker
+<https://bitbucket.org/ollyc/yoyo/issues>`_ to report issues.
+
+There is also a `mailing list <https://lists.sr.ht/~olly/yoyo>`_ where you can
+post questions or suggestions.
+
 
 Pull requests
 -------------
