@@ -91,7 +91,7 @@ html_theme = "fresco_sphinx_theme"
 # documentation.
 #
 html_theme_options = {
-    "repo_url": "https://bitbucket.org/ollyc/yoyo/",
+    "repo_url": "https://hg.sr.ht/~olly/yoyo/",
     "issues_url": "https://bitbucket.org/ollyc/yoyo/issues/",
 }
 
