@@ -301,8 +301,8 @@ def list_migrations(args, config):
 
     APPLIED, UNAPPLIED = "A", "U"
     if sys.stdout.isatty():
-        APPLIED = f"\033[92m{APPLIED}\033[0m"
-        UNAPPLIED = f"\033[91m{UNAPPLIED}\033[0m"
+        APPLIED = "\033[92m{APPLIED}\033[0m".format(APPLIED=APPLIED)
+        UNAPPLIED = "\033[91m{UNAPPLIED}\033[0m".format(UNAPPLIED=UNAPPLIED)
 
     with backend.lock():
         migrations = migrations.__class__(topological_sort(migrations))
