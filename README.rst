@@ -38,4 +38,4 @@ Documentation and code
 ----------------------
 
 `Yoyo migrations documentation <https://ollycope.com/software/yoyo/>`_
-\| `Repository <https://bitbucket.org/ollyc/yoyo/>`_
+\| `Repository <https://hg.sr.ht/~olly/yoyo/>`_
