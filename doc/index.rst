@@ -1,8 +1,8 @@
 Yoyo database migrations
 ########################
 
-Yoyo is a Python database schema migration tool. You write migrations as Python
-scripts containing raw SQL statements or Python functions.
+Yoyo is a database schema migration tool. Migrations are written as
+SQL files or Python scripts that define a list of migration steps.
 They can be as simple as this:
 
 .. code:: python
@@ -10,8 +10,10 @@ They can be as simple as this:
    # file: migrations/0001.create-foo.py
    from yoyo import step
    steps = [
-      step("CREATE TABLE foo (id INT, bar VARCHAR(20), PRIMARY KEY (id))",
-           "DROP TABLE foo"),
+      step(
+          "CREATE TABLE foo (id INT, bar VARCHAR(20), PRIMARY KEY (id))",
+          "DROP TABLE foo"
+      )
    ]
 
 Command line usage
@@ -53,8 +55,8 @@ By default, yoyo-migrations starts in an interactive mode, prompting you for
 each migration file before applying it, making it easy to preview which
 migrations to apply and rollback.
 
-Connections
------------
+Connecting to a database
+------------------------
 
 Database connections are specified using a URL. Examples:
 
@@ -157,10 +159,10 @@ The ``step`` function may take up to 3 arguments:
 - ``ignore_errors``: (optional, one of ``"apply"``, ``"rollback"`` or ``"all"``)
   causes yoyo to ignore database errors in either the apply stage, rollback stage or both.
 
-Using Python functions to define migration steps
-`````````````````````````````````````````````````
+Migration steps as Python functions
+```````````````````````````````````
 
-If an SQL query is not flexible enough, you may supply a Python function as
+If SQL is not flexible enough, you may supply a Python function as
 either or both of the ``apply`` or ``rollback`` arguments of ``step``.
 Each function should take a database connection as its only argument:
 
@@ -357,8 +359,8 @@ of the config file.
 Environment variables can be substituted with the same syntax, eg ``%(HOME)s``.
 
 
-Sources
---------
+Migration sources
+-----------------
 
 Yoyo reads migration scripts from the directories specified in the ``sources``
 config option. Paths may include glob patterns, for example:
@@ -453,8 +455,8 @@ accessing the database for the duration of the migration. Using
 ``__transactional__ = False`` allows you to work around this limitation.
 
 
-Using yoyo from python code
-===========================
+Calling Yoyo from Python code
+=============================
 
 The following example shows how to apply migrations from inside python code:
 

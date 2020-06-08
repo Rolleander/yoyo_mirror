@@ -3,14 +3,14 @@
 Yoyo database migrations
 ========================
 
-Yoyo is a database schema migration tool. You write database migrations
-as Python scripts containing raw SQL statements or Python functions.
+Yoyo-migrations is a database schema migration tool.
+Database migrations can be written as SQL files or Python scripts.
 
 What does yoyo-migrations do?
 -----------------------------
 
 As your database application evolves, changes to the database schema may be
-required. Yoyo lets you write migration scripts in Python containing
+required. Yoyo lets you write migration scripts in raw SQL or Python containing
 SQL statements to migrate your database schema to a new version.
 
 A simple migration script looks like this:
