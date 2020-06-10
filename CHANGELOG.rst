@@ -1,3 +1,9 @@
+7.1.1
+-----
+
+* Bugfix: command line tool no longer shows an error message if you don't
+  specify a command
+
 7.1.0 (released 2020-06-08)
 ---------------------------
 

@@ -274,6 +274,11 @@ def get_backend(args, config):
 
 def main(argv=None):
     config, argparser, args = parse_args(argv)
+
+    if getattr(args, "func", None) is None:
+        argparser.print_usage(sys.stderr)
+        argparser.exit(1)
+
     config_is_empty = config.sections() == [] and config.items("DEFAULT") == []
 
     sources = getattr(args, "sources", None)
