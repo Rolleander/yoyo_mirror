@@ -21,6 +21,7 @@ from copy import copy
 from glob import glob
 from itertools import chain
 from itertools import count
+from itertools import takewhile
 from itertools import zip_longest
 from logging import getLogger
 from typing import Dict
@@ -742,14 +743,10 @@ def heads(migration_list):
     return heads
 
 
-def topological_sort(migration_list):
-
-    # The sorted list, initially empty
-    L = list()
+def topological_sort(migration_list: MigrationList) -> Iterable[Migration]:
 
     # Make a copy of migration_list. It's probably an iterator.
     migration_list = list(migration_list)
-    valid_migrations = set(migration_list)
 
     # Track graph edges in two parallel data structures.
     # Use OrderedDict so that we can traverse edges in order
@@ -761,51 +758,57 @@ def topological_sort(migration_list):
         OrderedDict
     )  # type: Dict[Migration, Dict[Migration, int]]
 
+    def sort_by_stability_order(
+        items, ordering={m: index for index, m in enumerate(migration_list)}
+    ):
+        return sorted(
+            (item for item in items if item in ordering), key=ordering.get
+        )
+
     for m in migration_list:
-        for n in m.depends:
-            if n not in valid_migrations:
-                continue
+        for n in sort_by_stability_order(m.depends):
             forward_edges[n][m] = 1
             backward_edges[m][n] = 1
 
-    # Only toposort the migrations forming part of the dependency graph
-    to_toposort = set(chain(forward_edges, backward_edges))
-
-    # Starting migrations: those with no dependencies
-    # To make this a stable sort we always need to pop from the left end
-    # of this list, hence use a deque.
-    S = deque(
-        m
-        for m in to_toposort
-        if not any(n in valid_migrations for n in m.depends)
-    )
-
-    while S:
-        n = S.popleft()
-        L.append(n)
-
-        # for each node M with an edge E from N to M
-        for m in list(forward_edges[n]):
-
-            # remove edge E from the graph
-            del forward_edges[n][m]
-            del backward_edges[m][n]
-
-            # If M has no other incoming edges, it qualifies as a starting node
-            if not backward_edges[m]:
-                S.append(m)
-
-    if any(forward_edges.values()):
-        raise exceptions.BadMigration(
-            "Circular dependencies among these migrations {}".format(
-                ", ".join(
-                    m.id
-                    for m in forward_edges
-                    for n in {m} | set(forward_edges[m])
+    def check_cycles(item):
+        stack = [item]
+        path = []
+        while stack:
+            n = stack.pop()
+            if n in path:
+                raise exceptions.BadMigration(
+                    "Circular dependencies among these migrations {}".format(
+                        ", ".join(m.id for m in path + [n])
+                    )
                 )
-            )
-        )
+            path.append(n)
+            stack.extend(forward_edges[n])
 
-    # Return the toposorted migrations followed by the remainder of migrations
-    # in their original order
-    return L + [m for m in migration_list if m not in to_toposort]
+    seen = set()
+    for item in migration_list:
+
+        if item in seen:
+            continue
+
+        check_cycles(item)
+
+        # if item is in a dedepency graph, go back to the root node
+        while backward_edges[item]:
+            item = next(iter(backward_edges[item]))
+
+        # is item at the start of a dependency graph?
+        if forward_edges[item]:
+            stack = [item]
+            while stack:
+                m = stack.pop()
+                yield m
+                seen.add(m)
+                for child in list(reversed(forward_edges[m])):
+                    if all(
+                        dependency in seen
+                        for dependency in backward_edges[child]
+                    ):
+                        stack.append(child)
+        else:
+            yield item
+            seen.add(item)

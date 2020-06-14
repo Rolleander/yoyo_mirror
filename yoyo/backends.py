@@ -427,7 +427,7 @@ class DatabaseBackend(object):
         applied = self.get_applied_migration_hashes()
         ms = (m for m in migrations if m.hash in applied)
         return migrations.__class__(
-            reversed(topological_sort(ms)), migrations.post_apply
+            reversed(list(topological_sort(ms))), migrations.post_apply
         )
 
     def apply_migrations(self, migrations, force=False):

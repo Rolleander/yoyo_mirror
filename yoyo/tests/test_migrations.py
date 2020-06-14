@@ -16,7 +16,9 @@ from datetime import datetime
 from datetime import timedelta
 from mock import Mock, patch
 import io
+import itertools
 import os
+
 import pytest
 
 from yoyo.connections import get_backend
@@ -270,50 +272,68 @@ def test_grouped_migrations_can_be_rolled_back(backend):
 
 
 class TestTopologicalSort(object):
-    def get_mock_migrations(self):
+    def check(self, nodes, edges, expected_order):
+        migrations = self.get_mock_migrations(nodes, edges)
+        output_order = "".join(m.id for m in topological_sort(migrations))
+        assert output_order == expected_order
+
+    def get_mock_migrations(self, nodes="ABCD", edges=[]):
         class MockMigration(Mock):
             def __repr__(self):
                 return "<MockMigration {}>".format(self.id)
 
-        return [
-            MockMigration(id="m1", depends=set()),
-            MockMigration(id="m2", depends=set()),
-            MockMigration(id="m3", depends=set()),
-            MockMigration(id="m4", depends=set()),
-        ]
+        migrations = {n: MockMigration(id=n, depends=set()) for n in nodes}
+        for g in edges:
+            for edge in zip(g, g[1:]):
+                migrations[edge[1]].depends.add(migrations[edge[0]])
+
+        return [migrations[n] for n in nodes]
 
     def test_it_keeps_stable_order(self):
-        m1, m2, m3, m4 = self.get_mock_migrations()
-        assert list(topological_sort([m1, m2, m3, m4])) == [m1, m2, m3, m4]
-        assert list(topological_sort([m4, m3, m2, m1])) == [m4, m3, m2, m1]
+
+        for s in itertools.permutations("ABCD"):
+            self.check(s, {}, "".join(s))
 
     def test_it_sorts_topologically(self):
-        m1, m2, m3, m4 = self.get_mock_migrations()
-        m3.depends.add(m4)
-        assert list(topological_sort([m1, m2, m3, m4])) == [m4, m3, m1, m2]
 
-    def test_it_brings_depended_upon_migrations_to_the_front(self):
-        m1, m2, m3, m4 = self.get_mock_migrations()
-        m1.depends.add(m4)
-        assert list(topological_sort([m1, m2, m3, m4])) == [m4, m1, m2, m3]
+        # Single group at start
+        self.check("ABCD", {"AB"}, "ABCD")
+        self.check("BACD", {"AB"}, "ABCD")
+
+        # Single group in middle start
+        self.check("CABD", {"AB"}, "CABD")
+        self.check("CBAD", {"AB"}, "CABD")
+
+        # Extended group
+        self.check("ABCD", {"AB", "AD"}, "ABDC")
+        self.check("DBCA", {"AB", "AD"}, "ADBC")
+
+        # Non-connected groups
+        self.check("ABCDEF", {"CB", "ED"}, "ACBEDF")
+        self.check("ADEBCF", {"CB", "ED"}, "AEDCBF")
+        self.check("ADEFBC", {"CB", "ED"}, "AEDFCB")
+        self.check("DBAFEC", {"CB", "ED"}, "EDCBAF")
 
     def test_it_discards_missing_dependencies(self):
-        m1, m2, m3, m4 = self.get_mock_migrations()
-        m3.depends.add(Mock())
-        assert list(topological_sort([m1, m2, m3, m4])) == [m1, m2, m3, m4]
+        A, B, C, D = self.get_mock_migrations()
+        C.depends.add(Mock())
+        assert list(topological_sort([A, B, C, D])) == [A, B, C, D]
 
     def test_it_catches_cycles(self):
-        m1, m2, m3, m4 = self.get_mock_migrations()
-        m3.depends.add(m3)
+        A, B, C, D = self.get_mock_migrations()
+        C.depends.add(C)
         with pytest.raises(exceptions.BadMigration):
-            list(topological_sort([m1, m2, m3, m4]))
+            self.check("ABCD", {"AA"}, "")
+        with pytest.raises(exceptions.BadMigration):
+            self.check("ABCD", {"AB", "BA"}, "")
+        with pytest.raises(exceptions.BadMigration):
+            self.check("ABCD", {"AB", "BC", "CB"}, "")
+        with pytest.raises(exceptions.BadMigration):
+            self.check("ABCD", {"AB", "BC", "CA"}, "")
 
     def test_it_handles_multiple_edges_to_the_same_node(self):
-        m1, m2, m3, m4 = self.get_mock_migrations()
-        m2.depends.add(m1)
-        m3.depends.add(m1)
-        m4.depends.add(m1)
-        assert list(topological_sort([m1, m2, m3, m4])) == [m1, m2, m3, m4]
+        self.check("ABCD", {"AB", "AC", "AD"}, "ABCD")
+        self.check("DCBA", {"AB", "AC", "AD"}, "ADCB")
 
 
 class TestMigrationList(object):
