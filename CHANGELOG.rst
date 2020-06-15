@@ -4,6 +4,9 @@
 * Bugfix: command line tool no longer shows an error message if you don't
   specify a command
 
+* Bugfix: migrations are maintained in filename order wherever the dependency
+  ordering allows it
+
 7.1.0 (released 2020-06-08)
 ---------------------------
 
