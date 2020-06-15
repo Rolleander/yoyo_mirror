@@ -16,12 +16,10 @@ from collections import Counter
 from collections import OrderedDict
 from collections import abc
 from collections import defaultdict
-from collections import deque
 from copy import copy
 from glob import glob
 from itertools import chain
 from itertools import count
-from itertools import takewhile
 from itertools import zip_longest
 from logging import getLogger
 from typing import Dict
