@@ -1,5 +1,5 @@
-7.1.1
------
+7.1.1 (released 2020-06-15)
+---------------------------
 
 * Bugfix: command line tool no longer shows an error message if you don't
   specify a command
