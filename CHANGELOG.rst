@@ -1,3 +1,8 @@
+7.1.2
+---------
+
+* Bugfix: fix circular dependency detection bug introduced in v7.1.1
+
 7.1.1 (released 2020-06-15)
 ---------------------------
 
