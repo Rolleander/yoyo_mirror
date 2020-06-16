@@ -769,18 +769,16 @@ def topological_sort(migration_list: MigrationList) -> Iterable[Migration]:
             backward_edges[m][n] = 1
 
     def check_cycles(item):
-        stack = [item]
-        path = []
+        stack = [(item, [])]
         while stack:
-            n = stack.pop()
+            n, path = stack.pop()
             if n in path:
                 raise exceptions.BadMigration(
                     "Circular dependencies among these migrations {}".format(
                         ", ".join(m.id for m in path + [n])
                     )
                 )
-            path.append(n)
-            stack.extend(forward_edges[n])
+            stack.extend((f, path + [n]) for f in forward_edges[n])
 
     seen = set()
     for item in migration_list:

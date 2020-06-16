@@ -335,6 +335,14 @@ class TestTopologicalSort(object):
         self.check("ABCD", {"AB", "AC", "AD"}, "ABCD")
         self.check("DCBA", {"AB", "AC", "AD"}, "ADCB")
 
+    def test_it_handles_multiple_edges_to_the_same_node2(self):
+        #      A --> B
+        #      |     ^
+        #      v     |
+        #      C --- +
+        for input_order in itertools.permutations("ABC"):
+            self.check(input_order, {"AB", "AC", "CB"}, "ACB")
+
 
 class TestMigrationList(object):
     def test_can_create_empty(self):
