@@ -703,6 +703,31 @@ class PostgresqlBackend(DatabaseBackend):
         return super(PostgresqlBackend, self).list_tables(schema=current_schema)
 
 
+class SnowflakeBackend(DatabaseBackend):
+
+    driver_module = "snowflake.connector"
+
+    def connect(self, dburi):
+        database, schema = dburi.database.split("/")
+        return self.driver.connect(
+            user=dburi.username,
+            password=dburi.password,
+            account=dburi.hostname,
+            database=database,
+            schema=schema,
+            warehouse=dburi.args["warehouse"],
+        )
+
+    def savepoint(self, id):
+        pass
+
+    def savepoint_release(self, id):
+        pass
+
+    def savepoint_rollback(self, id):
+        pass
+
+
 def get_dbapi_module(name):
     """
     Import and return the named DB-API driver module

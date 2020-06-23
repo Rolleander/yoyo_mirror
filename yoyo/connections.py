@@ -27,6 +27,7 @@ from .backends import ODBCBackend
 from .backends import OracleBackend
 from .backends import MySQLBackend
 from .backends import MySQLdbBackend
+from .backends import SnowflakeBackend
 
 BACKENDS = {
     "odbc": ODBCBackend,
@@ -37,6 +38,7 @@ BACKENDS = {
     "mysql": MySQLBackend,
     "mysql+mysqldb": MySQLdbBackend,
     "sqlite": SQLiteBackend,
+    "snowflake": SnowflakeBackend,
 }
 
 

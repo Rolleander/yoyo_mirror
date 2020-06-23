@@ -23,6 +23,7 @@ syntax: regexp
 ^\.mypy_cache/
 .*\.orig$
 ^tags
+\.idea/
 
 # Mercurial generated files
 .*\.orig$
