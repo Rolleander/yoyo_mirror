@@ -1,3 +1,13 @@
+7.2.0
+------
+
+* Bugfix: reliability fixes for the command line script (thanks to Chris van
+  Pelt for the patch)
+* Bugfix: the newmigration script should now work for Windows users (thanks to
+  Jimmy Laguna Montano for the patch)
+* Add experimental support for the `Snowflake` database backend (thanks to
+  Emmet Murphy for the patch)
+
 7.1.2 (released 2020-06-16)
 ---------------------------
 
