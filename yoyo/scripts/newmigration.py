@@ -172,10 +172,15 @@ def make_filename(config, directory, message, extension):
 def create_with_editor(config, directory, migration_source, extension):
     editor = utils.get_editor(config)
     tmpfile = NamedTemporaryFile(
-        dir=directory, prefix=tempfile_prefix, suffix=extension, delete=False
+        mode="w",
+        encoding="UTF-8",
+        dir=directory,
+        prefix=tempfile_prefix,
+        suffix=extension,
+        delete=False,
     )
     try:
-        with io.open(tmpfile.name, "w", encoding="UTF-8") as f:
+        with tmpfile as f:
             f.write(migration_source)
 
         editor = [part.format(tmpfile.name) for part in shlex.split(editor)]
