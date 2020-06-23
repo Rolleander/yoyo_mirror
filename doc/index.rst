@@ -293,7 +293,7 @@ against the wrong database (ie by re-running an earlier ``yoyo`` entry in
 your command history when you have moved to a different directory).
 
 If you do not want a config file to be loaded
-add the ``--no-config`` parameter to the command line options.
+add the ``--no-config-file`` parameter to the command line options.
 
 The configuration file may contain the following options:
 
