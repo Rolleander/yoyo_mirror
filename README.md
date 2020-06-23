@@ -4,4 +4,4 @@
 
 [Documentation](https://ollycope.com/software/yoyo/)
 
-[Issue tracker](https://bitbucket.org/ollyc/yoyo/issues/)
+[Issue tracker](https://todo.sr.ht/~olly/yoyo)

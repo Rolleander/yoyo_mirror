@@ -92,7 +92,7 @@ html_theme = "fresco_sphinx_theme"
 #
 html_theme_options = {
     "repo_url": "https://hg.sr.ht/~olly/yoyo/",
-    "issues_url": "https://bitbucket.org/ollyc/yoyo/issues/",
+    "issues_url": "https://todo.sr.ht/~olly/yoyo",
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

@@ -1,7 +1,7 @@
 Yoyo database migrations
 ########################
 
-`Source repository <https://hg.sr.ht/~olly/yoyo>`_ · `Issue tracker <https://bitbucket.org/ollyc/yoyo/issues>`_
+`Source repository and issue tracker <https://sr.ht/~olly/yoyo>`_
 
 Yoyo is a database schema migration tool. Migrations are written as
 SQL files or Python scripts that define a list of migration steps.
@@ -503,7 +503,8 @@ Report an issue
 ----------------
 
 Use the yoyo-migrations `issue tracker
-<https://bitbucket.org/ollyc/yoyo/issues>`_ to report issues.
+<https://todo.sr.ht/~olly/yoyo>`_ to report issues.
+
 
 There is also a `mailing list <https://lists.sr.ht/~olly/yoyo>`_ where you can
 post questions or suggestions.
