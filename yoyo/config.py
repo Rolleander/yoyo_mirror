@@ -58,7 +58,8 @@ class CustomInterpolation(configparser.BasicInterpolation):
 
 
 def get_interpolation_defaults(path: Optional[str] = None):
-    defaults = dict(os.environ)
+    parser = configparser.ConfigParser()
+    defaults = {parser.optionxform(k): v for k, v in os.environ.items()}
     if path:
         defaults["here"] = os.path.dirname(os.path.abspath(path))
     return defaults

@@ -172,12 +172,23 @@ class TestInheritance:
         )
 
 
-def test_it_interpolates_environment_variables():
-    os.environ["yoyo_test_env_var"] = "foo"
-    try:
-        _test_files(
-            {"a.ini": "[DEFAULT]\nx=%(yoyo_test_env_var)s"},
-            {"DEFAULT": {"x": "foo"}},
-        )
-    finally:
-        del os.environ["yoyo_test_env_var"]
+class TestInterpolation:
+    def test_it_interpolates_environment_variables(self):
+        os.environ["yoyo_test_env_var"] = "foo"
+        try:
+            _test_files(
+                {"a.ini": "[DEFAULT]\nx=%(yoyo_test_env_var)s"},
+                {"DEFAULT": {"x": "foo"}},
+            )
+        finally:
+            del os.environ["yoyo_test_env_var"]
+
+    def test_it_folds_environment_variable_case(self):
+        os.environ["YOYO_TEST_ENV_VAR"] = "foo"
+        try:
+            _test_files(
+                {"a.ini": "[DEFAULT]\nx=%(yoyo_test_env_var)s"},
+                {"DEFAULT": {"x": "foo"}},
+            )
+        finally:
+            del os.environ["YOYO_TEST_ENV_VAR"]

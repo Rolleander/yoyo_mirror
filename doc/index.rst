@@ -372,6 +372,8 @@ of the config file.
 
 Environment variables can be substituted with the same syntax, eg ``%(HOME)s``.
 
+Substitutions are case-insensitive so for example ``%(HOME)s`` and ``%(home)s``
+will both refer to the same variable.
 
 Migration sources
 -----------------

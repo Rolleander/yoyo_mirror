@@ -1,6 +1,8 @@
 7.2.0
 ------
 
+* Bugfix: fixed environment variable interpolation in config file when
+  variables are named in upper case
 * Bugfix: reliability fixes for the command line script (thanks to Chris van
   Pelt for the patch)
 * Bugfix: the newmigration script should now work for Windows users (thanks to
