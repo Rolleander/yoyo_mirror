@@ -1,5 +1,5 @@
-7.2.0
-------
+7.2.0 (released 2020-07-17)
+---------------------------
 
 * Bugfix: fixed environment variable interpolation in config file when
   variables are named in upper case
