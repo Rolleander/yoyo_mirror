@@ -237,7 +237,7 @@ def upgrade_legacy_config(args, config, sources):
             except configparser.NoOptionError:
                 pass
             try:
-                if "migration_table" not in args:
+                if not vars(args).get("migration_table"):
                     args.migration_table = legacy_config.get(
                         "DEFAULT", "migration_table"
                     )
@@ -290,12 +290,12 @@ def main(argv=None):
     verbosity = min(max_verbosity, max(min_verbosity, verbosity))
     configure_logging(verbosity)
 
-    if "sources" in args:
+    if vars(args).get("sources"):
         config.set("DEFAULT", "sources", " ".join(args.sources))
-    if "database" in args:
+    if vars(args).get("database"):
         # ConfigParser requires that any percent signs in the db uri be escaped.
         config.set("DEFAULT", "database", args.database.replace("%", "%%"))
-    if "migration_table" in args:
+    if vars(args).get("migration_table"):
         config.set("DEFAULT", "migration_table", args.migration_table)
     config.set(
         "DEFAULT",
@@ -309,7 +309,7 @@ def main(argv=None):
             return main(argv)
 
     try:
-        if "func" in args:
+        if vars(args).get("func"):
             args.func(args, config)
     except InvalidArgument as e:
         argparser.error(e.args[0])
