@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 from typing import Dict
+from urllib.parse import quote
 import os
 import pathlib
 import tempfile
@@ -192,3 +193,13 @@ class TestInterpolation:
             )
         finally:
             del os.environ["YOYO_TEST_ENV_VAR"]
+
+    def test_it_allows_url_encoded_values(self):
+        os.environ["yoyo_test_env_var"] = quote("p@ssword$")
+        try:
+            _test_files(
+                {"a.ini": "[DEFAULT]\nx=%(yoyo_test_env_var)s"},
+                {"DEFAULT": {"x": quote("p@ssword$")}},
+            )
+        finally:
+            del os.environ["yoyo_test_env_var"]
