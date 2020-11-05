@@ -1,4 +1,4 @@
-7.2.1
+7.2.1 (released 2020-11-05)
 ---------------------------
 
 * Bugfix: allow configuration values passed in from the environment to contain
