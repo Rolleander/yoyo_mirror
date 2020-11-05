@@ -1,3 +1,13 @@
+7.2.1
+---------------------------
+
+* Bugfix: allow configuration values passed in from the environment to contain
+  percent signs (thanks to Andrew Gates for the patch)
+* Add support for ``--prompt-password`` argument to ``break-lock`` command
+* Add support for Python 3.9 (no code changes)
+* Drop support for Python 3.5 (no code changes)
+
+
 7.2.0 (released 2020-07-17)
 ---------------------------
 
