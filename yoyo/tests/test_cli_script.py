@@ -265,6 +265,17 @@ class TestYoyoScript(TestInteractiveScript):
         ).fetchone()[0]
         assert lock_count == 0
 
+    def test_it_prompts_password_on_break_lock(self, tmpdir):
+        dburi = "sqlite://user@/:memory"
+        with patch(
+            "yoyo.scripts.main.getpass", return_value="fish"
+        ) as getpass, patch("yoyo.connections.get_backend") as get_backend:
+            main(["break-lock", "--database", dburi, "--prompt-password"])
+            assert getpass.call_count == 1
+            assert get_backend.call_args == call(
+                "sqlite://user:fish@/:memory", "_yoyo_migration"
+            )
+
 
 class TestArgParsing(TestInteractiveScript):
     def test_it_uses_config_file_defaults(self):
