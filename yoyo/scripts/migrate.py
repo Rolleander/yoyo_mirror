@@ -70,7 +70,10 @@ def install_argparsers(global_parser, subparsers):
     filter_parser.add_argument(
         "-r",
         "--revision",
-        help="Apply/rollback migration with id " "REVISION",
+        help=(
+            "Apply/rollback migration with id REVISION and all its "
+            "dependencies"
+        ),
         metavar="REVISION",
     )
 
