@@ -177,7 +177,7 @@ def migrations_to_revision(migrations, revision, direction):
 
     target = targets[0]
 
-    # apply: apply target an all its dependencies
+    # apply: apply target and all its dependencies
     if direction == "apply":
         deps = ancestors(target, migrations)
         target_plus_deps = deps | {target}
