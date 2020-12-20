@@ -100,14 +100,14 @@ def install_argparsers(global_parser, subparsers):
 
     parser_apply = subparsers.add_parser(
         "apply",
-        description="Apply migrations",
+        help="Apply migrations",
         parents=[global_parser, standard_options_parser, apply_parser],
     )
     parser_apply.set_defaults(func=apply, command_name="apply")
 
     parser_list = subparsers.add_parser(
         "list",
-        description="List all available and applied migrations. "
+        help="List all available and applied migrations. "
         "Each listed migration is prefixed with either A (applied) or U "
         "(unapplied)",
         parents=[global_parser, standard_options_parser, filter_parser],
@@ -117,14 +117,14 @@ def install_argparsers(global_parser, subparsers):
     parser_rollback = subparsers.add_parser(
         "rollback",
         parents=[global_parser, standard_options_parser, apply_parser],
-        description="Rollback migrations",
+        help="Rollback migrations",
     )
     parser_rollback.set_defaults(func=rollback, command_name="rollback")
 
     parser_reapply = subparsers.add_parser(
         "reapply",
         parents=[global_parser, standard_options_parser, apply_parser],
-        description="Reapply migrations",
+        help="Rollback then reapply migrations",
     )
     parser_reapply.set_defaults(func=reapply, command_name="reapply")
 
@@ -138,7 +138,7 @@ def install_argparsers(global_parser, subparsers):
     parser_unmark = subparsers.add_parser(
         "unmark",
         parents=[global_parser, standard_options_parser, apply_parser],
-        description="Unmark applied migrations, without rolling them back",
+        help="Unmark applied migrations, without rolling them back",
     )
     parser_unmark.set_defaults(func=unmark, command_name="unmark")
 
