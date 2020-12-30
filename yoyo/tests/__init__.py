@@ -44,8 +44,8 @@ def get_test_backends(only=frozenset(), exclude=frozenset()):
 
 
 def clear_database(backend):
-    for table in backend.list_tables():
-        with backend.transaction():
+    with backend.transaction():
+        for table in backend.list_tables():
             backend.execute("DROP TABLE {}".format(table))
 
 
