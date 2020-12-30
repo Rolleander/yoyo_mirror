@@ -92,7 +92,9 @@ def get_backend(uri, migration_table=default_migration_table):
         raise BadConnectionURI(
             "Unrecognised database connection scheme %r" % parsed.scheme
         )
-    return backend_class(parsed, migration_table)
+    backend = backend_class(parsed, migration_table)
+    backend.init_database()
+    return backend
 
 
 def parse_uri(s):
