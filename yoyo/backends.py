@@ -670,8 +670,11 @@ class SQLiteBackend(DatabaseBackend):
     list_tables_sql = "SELECT name FROM sqlite_master WHERE type = 'table'"
 
     def connect(self, dburi):
+        # Ensure that multiple connections share the same data
+        # https://sqlite.org/sharedcache.html
         conn = self.driver.connect(
-            dburi.database, detect_types=self.driver.PARSE_DECLTYPES
+            f"{dburi.database}?cache=shared",
+            detect_types=self.driver.PARSE_DECLTYPES
         )
         conn.isolation_level = None
         return conn
