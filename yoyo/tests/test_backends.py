@@ -14,6 +14,7 @@ from yoyo.connections import get_backend
 from yoyo.tests import get_test_backends
 from yoyo.tests import get_test_dburis
 from yoyo.tests import with_migrations
+from yoyo.tests import migrations_dir
 
 
 class TestTransactionHandling(object):
@@ -293,3 +294,21 @@ class TestInitConnection(object):
                     "ALTER DATABASE {} RESET SEARCH_PATH".format(dbname)
                 )
                 backend.execute("DROP SCHEMA custom_schema CASCADE")
+
+    def test_postgresql_migrations_can_change_schema_search_path(self):
+        """
+        https://todo.sr.ht/~olly/yoyo/72
+        """
+        dburi = next(iter(get_test_dburis(only={"postgresql"})), None)
+        if dburi is None:
+            pytest.skip("PostgreSQL backend not available")
+        backend = get_backend(dburi)
+        with migrations_dir(
+            **{
+                "1.sql": "SELECT pg_catalog.set_config('search_path', '', false)"
+            }
+        ) as tmpdir:
+            migrations = read_migrations(tmpdir)
+            backend.apply_migrations(migrations)
+            applied = backend.execute("SELECT migration_id FROM _yoyo_log").fetchall()
+            assert applied == [("1",)]
