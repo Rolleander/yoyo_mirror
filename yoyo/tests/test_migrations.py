@@ -27,6 +27,7 @@ from yoyo import exceptions
 from yoyo import ancestors, descendants
 
 from yoyo.tests import with_migrations, migrations_dir, dburi
+from yoyo.tests import clear_database
 from yoyo.tests import tempdir
 from yoyo.migrations import topological_sort, MigrationList
 from yoyo.scripts import newmigration
@@ -43,12 +44,16 @@ step("INSERT INTO yoyo_test VALUES ('x', 'y')")
 )
 def test_transaction_is_not_committed_on_error(tmpdir):
     backend = get_backend(dburi)
-    migrations = read_migrations(tmpdir)
-    with pytest.raises(backend.DatabaseError):
-        backend.apply_migrations(migrations)
-    cursor = backend.cursor()
-    cursor.execute("SELECT count(1) FROM yoyo_test")
-    assert cursor.fetchone() == (0,)
+    try:
+        migrations = read_migrations(tmpdir)
+        with pytest.raises(backend.DatabaseError):
+            backend.apply_migrations(migrations)
+        backend.rollback()
+        cursor = backend.cursor()
+        cursor.execute("SELECT count(1) FROM yoyo_test")
+        assert cursor.fetchone() == (0,)
+    finally:
+        clear_database(backend)
 
 
 @with_migrations(
@@ -59,15 +64,18 @@ step("UPDATE yoyo_test SET id=2 WHERE id=1", "UPDATE yoyo_test SET id=1 WHERE id
     """,
 )
 def test_rollbacks_happen_in_reverse(tmpdir):
-    backend = get_backend(dburi)
-    migrations = read_migrations(tmpdir)
-    backend.apply_migrations(migrations)
-    cursor = backend.cursor()
-    cursor.execute("SELECT * FROM yoyo_test")
-    assert cursor.fetchall() == [(2,)]
-    backend.rollback_migrations(migrations)
-    cursor.execute("SELECT * FROM yoyo_test")
-    assert cursor.fetchall() == []
+    try:
+        backend = get_backend(dburi)
+        migrations = read_migrations(tmpdir)
+        backend.apply_migrations(migrations)
+        cursor = backend.cursor()
+        cursor.execute("SELECT * FROM yoyo_test")
+        assert cursor.fetchall() == [(2,)]
+        backend.rollback_migrations(migrations)
+        cursor.execute("SELECT * FROM yoyo_test")
+        assert cursor.fetchall() == []
+    finally:
+        clear_database(backend)
 
 
 @with_migrations(
@@ -79,12 +87,15 @@ def test_rollbacks_happen_in_reverse(tmpdir):
     """
 )
 def test_execution_continues_with_ignore_errors(tmpdir):
-    backend = get_backend(dburi)
-    migrations = read_migrations(tmpdir)
-    backend.apply_migrations(migrations)
-    cursor = backend.cursor()
-    cursor.execute("SELECT * FROM yoyo_test")
-    assert cursor.fetchall() == [(1,), (2,)]
+    try:
+        backend = get_backend(dburi)
+        migrations = read_migrations(tmpdir)
+        backend.apply_migrations(migrations)
+        cursor = backend.cursor()
+        cursor.execute("SELECT * FROM yoyo_test")
+        assert cursor.fetchall() == [(1,), (2,)]
+    finally:
+        clear_database(backend)
 
 
 @with_migrations(
