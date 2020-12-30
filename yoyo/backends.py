@@ -192,6 +192,19 @@ class DatabaseBackend(object):
         db specific tasks required to make the connection ready for use.
         """
 
+    def copy(self):
+        """
+        Return a copy of the backend with a independent db
+        connection.
+        """
+        return self.__class__(self.uri, self.migration_table)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.connection.close()
+
     def __getattr__(self, attrname):
         if attrname.endswith("_quoted"):
             unquoted = getattr(self, attrname.rsplit("_quoted")[0])
@@ -489,7 +502,8 @@ class DatabaseBackend(object):
         """
         logger.info("Applying %s", migration.id)
         self.ensure_internal_schema_updated()
-        migration.process_steps(self, "apply", force=force)
+        with self.copy() as migration_backend:
+            migration.process_steps(migration_backend, "apply", force=force)
         self.log_migration(migration, "apply")
         if mark:
             with self.transaction():
@@ -501,7 +515,8 @@ class DatabaseBackend(object):
         """
         logger.info("Rolling back %s", migration.id)
         self.ensure_internal_schema_updated()
-        migration.process_steps(self, "rollback", force=force)
+        with self.copy() as migration_backend:
+            migration.process_steps(migration_backend, "rollback", force=force)
         self.log_migration(migration, "rollback")
         with self.transaction():
             self.unmark_one(migration, log=False)
