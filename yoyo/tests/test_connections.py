@@ -72,10 +72,6 @@ class TestParseURI:
         assert parsed.password == 'a/b'
 
 
-@pytest.mark.skipif(
-    sys.version_info < (2, 7, 4),
-    reason="Requires python>=2.7.4 " "(http://bugs.python.org/issue7904)",
-)
 @patch(
     "yoyo.backends.get_dbapi_module",
     return_value=MagicMock(
