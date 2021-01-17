@@ -43,7 +43,7 @@ BACKENDS = {
 
 
 _DatabaseURI = namedtuple(
-    "_DatabaseURI", "scheme username password hostname port database " "args"
+    "_DatabaseURI", "scheme username password hostname port database args"
 )
 
 
