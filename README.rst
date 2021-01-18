@@ -1,5 +1,3 @@
-**IMPORTANT**: On Tuesday 23 June 2020 the yoyo repository will move to `Sourcehut <https://hg.sr.ht/~olly/yoyo/>`_.
-
 Yoyo database migrations
 ========================
 
