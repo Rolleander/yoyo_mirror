@@ -45,7 +45,7 @@ else:
         saved_attributes = termios.tcgetattr(fd)
         try:
             attributes = termios.tcgetattr(fd)  # get a fresh copy!
-            attributes[3] = attributes[3] & ~(termios.ICANON | termios.ECHO)  # type: ignore
+            attributes[3] = (attributes[3] & ~(termios.ICANON | termios.ECHO))  # type: ignore  # noqa: E501
             attributes[6][termios.VMIN] = 1  # type: ignore
             attributes[6][termios.VTIME] = 0  # type: ignore
             termios.tcsetattr(fd, termios.TCSANOW, attributes)
@@ -142,11 +142,25 @@ def change_param_style(target_style, sql, bind_parameters):
     if not bind_parameters:
         return (sql, (tuple() if positional else {}))
 
+    _param_counter = count(1)
+
+    def param_gen_qmark(name):
+        return "?"
+
+    def param_gen_numeric(name):
+        return f":{next(_param_counter)}"
+
+    def param_gen_format(name):
+        return "%s"
+
+    def param_gen_pyformat(name):
+        return f"%({name})s"
+
     param_gen = {
-        "qmark": lambda name: "?",
-        "numeric": lambda name, c=count(1): ":{}".format(next(c)),
-        "format": lambda name: "%s",
-        "pyformat": lambda name: "%({})s".format(name),
+        "qmark": param_gen_qmark,
+        "numeric": param_gen_numeric,
+        "format": param_gen_format,
+        "pyformat": param_gen_pyformat,
     }[target_style]
 
     pattern = re.compile(
@@ -161,7 +175,9 @@ def change_param_style(target_style, sql, bind_parameters):
         r"(?=\W|$)"
     )
 
-    transformed_sql = pattern.sub(lambda match: param_gen(match.group(1)), sql)  # type: ignore
+    transformed_sql = pattern.sub(
+        lambda match: param_gen(match.group(1)), sql
+    )
     if positional:
         positional_params = []
         for match in pattern.finditer(sql):

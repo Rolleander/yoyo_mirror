@@ -107,7 +107,8 @@ def install_argparsers(global_parser, subparsers):
     parser_apply.add_argument(
         "-1",
         "--one",
-        help="Apply a single migration. If there are no unapplied migrations, reapply the last migration",
+        help="Apply a single migration. "
+        "If there are no unapplied migrations, reapply the last migration",
     )
 
     parser_develop = subparsers.add_parser(
@@ -159,7 +160,9 @@ def install_argparsers(global_parser, subparsers):
     parser_unmark.set_defaults(func=unmark, command_name="unmark")
 
     parser_break_lock = subparsers.add_parser(
-        "break-lock", parents=[global_parser, standard_options_parser], help="Break migration locks"
+        "break-lock",
+        parents=[global_parser, standard_options_parser],
+        help="Break migration locks",
     )
     parser_break_lock.set_defaults(func=break_lock, command_name="break-lock")
 
