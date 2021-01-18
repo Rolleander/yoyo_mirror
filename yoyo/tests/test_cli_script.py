@@ -32,6 +32,7 @@ import tms
 from yoyo import read_migrations
 from yoyo.config import get_configparser
 from yoyo.tests import with_migrations, dburi
+from yoyo.tests import migrations_dir
 from yoyo.tests import get_backend
 from yoyo.scripts.main import main, parse_args, LEGACY_CONFIG_FILENAME
 from yoyo.scripts import newmigration
@@ -74,6 +75,13 @@ class TestInteractiveScript(object):
         else:
             with open("yoyo.ini", "w", encoding="UTF-8") as f:
                 cp.write(f)
+
+    def get_migration_log(self):
+        return (
+            get_backend(self.dburi)
+            .execute("SELECT migration_id, operation FROM _yoyo_log")
+            .fetchall()
+        )
 
 
 class TestYoyoScript(TestInteractiveScript):
@@ -223,7 +231,7 @@ class TestYoyoScript(TestInteractiveScript):
         if backend.uri.scheme == "sqlite":
             pytest.skip("Concurrency tests not supported for sqlite databases")
 
-        with with_migrations(
+        with migrations_dir(
             m1=(
                 "import time\n"
                 "step(lambda conn: time.sleep(0.1))\n"
@@ -254,8 +262,7 @@ class TestYoyoScript(TestInteractiveScript):
             pytest.skip("Test not supported for sqlite databases")
         backend = get_backend(dburi)
         backend.execute(
-            "INSERT INTO yoyo_lock (locked, ctime, pid) "
-            "VALUES (1, :now, 1)",
+            "INSERT INTO yoyo_lock (locked, ctime, pid) " "VALUES (1, :now, 1)",
             {"now": datetime.utcnow()},
         )
         backend.commit()
@@ -457,9 +464,7 @@ class TestNewMigration(TestInteractiveScript):
         # fallback to $EDITOR
         with patch("os.environ", {"EDITOR": "ed"}):
             main(["new", tmpdir, "--database", dburi])
-            assert self.subprocess.call.call_args == call(
-                ["ed", tms.Unicode()]
-            )
+            assert self.subprocess.call.call_args == call(["ed", tms.Unicode()])
 
         # Otherwise, vi
         with patch("os.environ", {}):
@@ -537,9 +542,7 @@ class TestNewMigration(TestInteractiveScript):
                 dburi,
             ]
         )
-        name = next(
-            n for n in sorted(os.listdir(tmpdir)) if n.endswith(".sql")
-        )
+        name = next(n for n in sorted(os.listdir(tmpdir)) if n.endswith(".sql"))
         with io.open(os.path.join(tmpdir, name), "r", encoding="utf-8") as f:
             assert f.read() == textwrap.dedent(
                 """\
@@ -552,7 +555,7 @@ class TestNewMigration(TestInteractiveScript):
 
 class TestList(TestInteractiveScript):
     def get_output(self, migrations):
-        with with_migrations(**migrations) as tmpdir:
+        with migrations_dir(**migrations) as tmpdir:
             with patch("sys.stdout", io.StringIO()) as captured:
                 main(["list", tmpdir, "--database", dburi])
             return captured.getvalue()
@@ -561,3 +564,51 @@ class TestList(TestInteractiveScript):
         output = self.get_output({"m1": "", "m2": ""})
         assert re.search(r"^U\s+m1", output, re.M)
         assert re.search(r"^U\s+m2", output, re.M)
+
+
+class TestDevelopCommand(TestInteractiveScript):
+    def test_it_applies_outstanding_migrations(self):
+        with migrations_dir(m1="", m2="") as tmpdir:
+            main(["develop", tmpdir, "--database", self.dburi])
+            assert self.get_migration_log() == [
+                ("m1", "apply"),
+                ("m2", "apply"),
+            ]
+
+    def test_it_reapplies_last_migration(self, tmpdir):
+        with migrations_dir(
+            m1='step("CREATE TABLE yoyo_test1 (id INT)", "DROP TABLE yoyo_test1")',
+            m2='step("CREATE TABLE yoyo_test2 (id INT)", "DROP TABLE yoyo_test2")',
+        ) as tmpdir:
+            main(["-b", "apply", tmpdir, "--database", self.dburi])
+            assert self.get_migration_log() == [
+                ("m1", "apply"),
+                ("m2", "apply"),
+            ]
+            main(["develop", tmpdir, "--database", self.dburi])
+            assert self.get_migration_log() == [
+                ("m1", "apply"),
+                ("m2", "apply"),
+                ("m2", "rollback"),
+                ("m2", "apply"),
+            ]
+
+    def test_it_reapplies_last_n_migrations(self, tmpdir):
+        with migrations_dir(
+            m1='step("CREATE TABLE yoyo_test1 (id INT)", "DROP TABLE yoyo_test1")',
+            m2='step("CREATE TABLE yoyo_test2 (id INT)", "DROP TABLE yoyo_test2")',
+        ) as tmpdir:
+            main(["-b", "apply", tmpdir, "--database", self.dburi])
+            assert self.get_migration_log() == [
+                ("m1", "apply"),
+                ("m2", "apply"),
+            ]
+            main(["develop", tmpdir, "-n", "2", "--database", self.dburi])
+            assert self.get_migration_log() == [
+                ("m1", "apply"),
+                ("m2", "apply"),
+                ("m2", "rollback"),
+                ("m1", "rollback"),
+                ("m1", "apply"),
+                ("m2", "apply"),
+            ]

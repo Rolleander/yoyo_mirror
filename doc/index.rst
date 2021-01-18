@@ -65,9 +65,26 @@ List available migrations:
     yoyo list --database sqlite:////home/sheila/important.db ./migrations
 
 
-By default, yoyo-migrations starts in an interactive mode, prompting you for
-each migration file before applying it, making it easy to preview which
-migrations to apply and rollback.
+During development, the ``yoyo develop`` command can be used to apply any
+unapplied migrations without further prompting:
+
+.. code:: shell
+
+    $ yoyo develop --database postgresql://localhost/mydb migrations
+    Applying 3 migrations:
+        [00000000_initial-schema]
+        [00000001_add-table-foo]
+        [00000002_add-table-bar]
+
+If there are no migrations waiting to be applied the ``develop`` command will
+instead roll back and reapply the last migration:
+
+.. code:: shell
+
+    $ yoyo develop --database postgresql://localhost/dev ./migrations
+    Reapplying 1 migration:
+        [00000002_add-table-bar]
+
 
 Connecting to a database
 ------------------------
