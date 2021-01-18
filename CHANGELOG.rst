@@ -1,3 +1,11 @@
+7.3.1 (released 2021-01-18)
+---------------------------
+
+* Add support for AWS Redshift (thanks to Daniele Pizzoni for the patch)
+* Add a new ``yoyo develop`` command
+* Bugfix: properly escape passwords containing forward slashes
+
+
 7.2.1 (released 2020-11-05)
 ---------------------------
 

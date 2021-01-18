@@ -33,7 +33,7 @@ def upgrade(backend, version=None):
     with backend.transaction():
         while current_version < desired_version:
             next_version = current_version + 1
-            schema_versions[next_version].upgrade(backend)
+            schema_versions[next_version].upgrade(backend)  # type: ignore
             current_version = next_version
             mark_schema_version(backend, current_version)
 

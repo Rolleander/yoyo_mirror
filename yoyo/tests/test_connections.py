@@ -65,11 +65,13 @@ class TestParseURI:
     def test_it_returns_absolute_paths_for_sqlite(self):
         assert parse_uri("sqlite:////foo/bar.db").database == "/foo/bar.db"
 
+    def test_passwords_with_slashes_dont_break_netloc(self):
+        parsed = parse_uri("postgresql://user:a%2Fb@localhost:5432/db")
+        assert parsed.netloc == 'user:a%2Fb@localhost:5432'
+        assert parsed.port == 5432
+        assert parsed.password == 'a/b'
 
-@pytest.mark.skipif(
-    sys.version_info < (2, 7, 4),
-    reason="Requires python>=2.7.4 " "(http://bugs.python.org/issue7904)",
-)
+
 @patch(
     "yoyo.backends.get_dbapi_module",
     return_value=MagicMock(

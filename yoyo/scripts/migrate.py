@@ -104,6 +104,23 @@ def install_argparsers(global_parser, subparsers):
         parents=[global_parser, standard_options_parser, apply_parser],
     )
     parser_apply.set_defaults(func=apply, command_name="apply")
+    parser_apply.add_argument(
+        "-1",
+        "--one",
+        help="Apply a single migration. "
+        "If there are no unapplied migrations, reapply the last migration",
+    )
+
+    parser_develop = subparsers.add_parser(
+        "develop",
+        help="Apply migrations without prompting. "
+        "If there are no unapplied migrations, reapply the last migration",
+        parents=[global_parser, standard_options_parser, apply_parser],
+    )
+    parser_develop.set_defaults(func=develop, command_name="develop")
+    parser_develop.add_argument(
+        "-n", type=int, help="Act on the last N migrations", default=1,
+    )
 
     parser_list = subparsers.add_parser(
         "list",
@@ -143,7 +160,9 @@ def install_argparsers(global_parser, subparsers):
     parser_unmark.set_defaults(func=unmark, command_name="unmark")
 
     parser_break_lock = subparsers.add_parser(
-        "break-lock", parents=[global_parser, standard_options_parser], help="Break migration locks"
+        "break-lock",
+        parents=[global_parser, standard_options_parser],
+        help="Break migration locks",
     )
     parser_break_lock.set_defaults(func=break_lock, command_name="break-lock")
 
@@ -192,7 +211,7 @@ def migrations_to_revision(migrations, revision, direction):
     return migrations
 
 
-def get_migrations(args, backend):
+def get_migrations(args, backend, direction=None):
 
     sources = args.sources
     dburi = args.database
@@ -200,7 +219,8 @@ def get_migrations(args, backend):
     if not sources:
         raise InvalidArgument("Please specify the migration source directory")
 
-    direction = "apply" if args.func in {mark, apply} else "rollback"
+    if not direction:
+        direction = "apply" if args.func in {mark, apply} else "rollback"
     migrations = read_migrations(*sources)
     migrations = filter_migrations(migrations, args.match)
     migrations = migrations_to_revision(migrations, args.revision, direction)
@@ -269,6 +289,32 @@ def rollback(args, config):
     with backend.lock():
         migrations = get_migrations(args, backend)
         backend.rollback_migrations(migrations, args.force)
+
+
+def develop(args, config):
+    args.batch_mode = True
+    backend = get_backend(args, config)
+    with backend.lock():
+        migrations = get_migrations(args, backend, "apply")
+        if migrations:
+            print(
+                "Applying",
+                utils.plural(len(migrations), "%d migration:", "%d migrations:"),
+            )
+            for m in migrations:
+                print(f"  [{m.id}]")
+            backend.apply_migrations(migrations, args.force)
+        else:
+            migrations = get_migrations(args, backend, "rollback")[: args.n]
+            print(
+                "Reapplying",
+                utils.plural(len(migrations), "%d migration:", "%d migrations:"),
+            )
+            for m in migrations:
+                print(f"  [{m.id}]")
+            backend.rollback_migrations(migrations, args.force)
+            migrations = get_migrations(args, backend, "apply")
+            backend.apply_migrations(migrations, args.force)
 
 
 def mark(args, config):

@@ -649,7 +649,7 @@ class TestLogging(object):
             assert logged["migration_id"] == "a"
             assert logged["operation"] == "apply"
             assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(
-                seconds=2
+                seconds=3
             )
             apply_time = logged["created_at_utc"]
 
@@ -671,7 +671,7 @@ class TestLogging(object):
             assert logged["migration_id"] == "a"
             assert logged["operation"] == "mark"
             assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(
-                seconds=2
+                seconds=3
             )
             marked_time = logged["created_at_utc"]
 

@@ -25,7 +25,7 @@ from logging import getLogger
 from typing import Dict
 from typing import Iterable
 from typing import List
-from typing import Mapping
+from typing import MutableMapping
 from typing import Tuple
 import hashlib
 import importlib.util
@@ -48,9 +48,9 @@ default_migration_table = "_yoyo_migration"
 
 hash_function = hashlib.sha256
 
-_collectors = (
+_collectors: MutableMapping[str, "StepCollector"] = (
     weakref.WeakValueDictionary()
-)  # type: Mapping[str, "StepCollector"]
+)
 
 
 def _is_migration_file(path):
@@ -211,16 +211,30 @@ class Migration(object):
             for s, r in statements_with_rollback:
                 self.module.collector.add_step(s, r)  # type: ignore
             self.module.__doc__ = leading_comment
-            self.module.__transactional__ = {"true": True, "false": False}[  # type: ignore
-                directives.get("transactional", "true").lower()
-            ]
-            self.module.__depends__ = {  # type: ignore
-                d for d in directives.get("depends", "").split() if d
-            }
+            setattr(
+                self.module,
+                "__transactional__",
+                {"true": True, "false": False}[
+                    directives.get("transactional", "true").lower()
+                ],
+            )
+            setattr(
+                self.module,
+                "__depends__",
+                {d for d in directives.get("depends", "").split() if d}
+            )
 
         else:
             try:
-                spec.loader.exec_module(self.module)
+                if spec.loader is None:
+                    logger.exception(
+                        "Could not import migration from %r: "
+                        "ModuleSpec has no loader attached",
+                        self.path,
+                    )
+                    raise exceptions.BadMigration(self.path)
+
+                spec.loader.exec_module(self.module)  # type: ignore
 
             except Exception as e:
                 logger.exception(
@@ -244,6 +258,7 @@ class Migration(object):
         reverse = {"rollback": "apply", "apply": "rollback"}[direction]
 
         steps = self.steps
+        assert steps is not None
         if direction == "rollback":
             steps = reversed(steps)  # type: ignore
 
@@ -275,7 +290,7 @@ class Migration(object):
                             logger.exception(
                                 "Could not %s step %s", direction, step.id
                             )
-                    if exc_info[1]:
+                    if exc_info[1] is not None:
                         raise exc_info[1].with_traceback(exc_info[2])
 
 
@@ -741,7 +756,9 @@ def heads(migration_list):
     return heads
 
 
-def topological_sort(migration_list: MigrationList) -> Iterable[Migration]:
+def topological_sort(
+    migration_list: Iterable[Migration],
+) -> Iterable[Migration]:
 
     # Make a copy of migration_list. It's probably an iterator.
     migration_list = list(migration_list)
@@ -769,7 +786,7 @@ def topological_sort(migration_list: MigrationList) -> Iterable[Migration]:
             backward_edges[m][n] = 1
 
     def check_cycles(item):
-        stack = [(item, [])]
+        stack: List[Tuple[Migration, List[Migration]]] = [(item, [])]
         while stack:
             n, path = stack.pop()
             if n in path:
@@ -799,7 +816,7 @@ def topological_sort(migration_list: MigrationList) -> Iterable[Migration]:
                 m = stack.pop()
                 yield m
                 seen.add(m)
-                for child in list(reversed(forward_edges[m])):
+                for child in list(reversed(list(forward_edges[m]))):
                     if all(
                         dependency in seen
                         for dependency in backward_edges[child]

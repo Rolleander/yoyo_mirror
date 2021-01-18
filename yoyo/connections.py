@@ -22,6 +22,7 @@ from urllib.parse import urlunsplit
 
 from .migrations import default_migration_table
 from .backends import PostgresqlBackend
+from .backends import RedshiftBackend
 from .backends import SQLiteBackend
 from .backends import ODBCBackend
 from .backends import OracleBackend
@@ -39,11 +40,12 @@ BACKENDS = {
     "mysql+mysqldb": MySQLdbBackend,
     "sqlite": SQLiteBackend,
     "snowflake": SnowflakeBackend,
+    "redshift": RedshiftBackend,
 }
 
 
 _DatabaseURI = namedtuple(
-    "_DatabaseURI", "scheme username password hostname port database " "args"
+    "_DatabaseURI", "scheme username password hostname port database args"
 )
 
 
@@ -58,7 +60,9 @@ class DatabaseURI(_DatabaseURI):
 
         if self.username:
             return "{}:{}@{}".format(
-                quote(self.username), quote(self.password or ""), hostpart
+                quote(self.username, safe=""),
+                quote(self.password or "", safe=""),
+                hostpart,
             )
         else:
             return hostpart
