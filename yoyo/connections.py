@@ -22,6 +22,7 @@ from urllib.parse import urlunsplit
 
 from .migrations import default_migration_table
 from .backends import PostgresqlBackend
+from .backends import RedshiftBackend
 from .backends import SQLiteBackend
 from .backends import ODBCBackend
 from .backends import OracleBackend
@@ -39,6 +40,7 @@ BACKENDS = {
     "mysql+mysqldb": MySQLdbBackend,
     "sqlite": SQLiteBackend,
     "snowflake": SnowflakeBackend,
+    "redshift": RedshiftBackend,
 }
 
 
