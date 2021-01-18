@@ -37,6 +37,9 @@ class TestTransactionHandling(object):
             assert rows == []
 
     def test_it_nests_transactions(self, backend):
+        if "redshift" in backend.uri.scheme:
+            pytest.skip("Nested transactions not supported for Redshift")
+
         with backend.transaction():
             backend.execute("INSERT INTO yoyo_t values ('A')")
 
@@ -51,9 +54,28 @@ class TestTransactionHandling(object):
             rows = list(backend.execute("SELECT * FROM yoyo_t").fetchall())
             assert rows == [("A",), ("C",)]
 
+    def test_redshift_nested_transactions(self, backend):
+        if "redshift" not in backend.uri.scheme:
+            pytest.skip("Redshift only test")
+
+        with backend.transaction():
+            backend.execute("INSERT INTO yoyo_t values ('A')")
+
+            with backend.transaction() as trans:
+                backend.execute("INSERT INTO yoyo_t values ('B')")
+                trans.rollback()
+
+            with backend.transaction() as trans:
+                backend.execute("INSERT INTO yoyo_t values ('C')")
+
+        with backend.transaction():
+            rows = list(backend.execute("SELECT * FROM yoyo_t").fetchall())
+            assert rows == [("C",)]
+
     def test_backend_detects_transactional_ddl(self, backend):
         expected = {
             backends.PostgresqlBackend: True,
+            backends.RedshiftBackend: True,
             backends.SQLiteBackend: True,
             backends.MySQLBackend: False,
         }
