@@ -704,7 +704,6 @@ class PostgresqlBackend(DatabaseBackend):
 
 
 class RedshiftBackend(PostgresqlBackend):
-
     def list_tables(self):
         current_schema = self.execute("SELECT current_schema()").fetchone()[0]
         return super(PostgresqlBackend, self).list_tables(schema=current_schema)
@@ -741,12 +740,12 @@ class RedshiftBackend(PostgresqlBackend):
                     )
                     return
                 elif timeout and time.time() > started + timeout:
-                        raise exceptions.LockTimeout(
-                            "Process {} has locked this database "
-                            "(run yoyo break-lock to remove this lock)".format(
-                                row[0]
-                            )
+                    raise exceptions.LockTimeout(
+                        "Process {} has locked this database "
+                        "(run yoyo break-lock to remove this lock)".format(
+                            row[0]
                         )
+                    )
                 else:
                     time.sleep(poll_interval)
 

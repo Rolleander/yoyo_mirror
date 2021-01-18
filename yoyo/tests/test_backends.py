@@ -37,7 +37,7 @@ class TestTransactionHandling(object):
             assert rows == []
 
     def test_it_nests_transactions(self, backend):
-        if ("redshift" in backend.uri.scheme):
+        if "redshift" in backend.uri.scheme:
             pytest.skip("Nested transactions not supported for Redshift")
 
         with backend.transaction():
@@ -55,7 +55,7 @@ class TestTransactionHandling(object):
             assert rows == [("A",), ("C",)]
 
     def test_redshift_nested_transactions(self, backend):
-        if (not "redshift" in backend.uri.scheme):
+        if "redshift" not in backend.uri.scheme:
             pytest.skip("Redshift only test")
 
         with backend.transaction():
