@@ -276,21 +276,6 @@ class TestInitConnection(object):
                 "SET search_path TO foo"
             )
 
-    def test_postgresql_backend_sets_search_path(self):
-        class MockPGBackend(backends.PostgresqlBackend):
-            driver = Mock(DatabaseError=Exception, paramstyle="format")
-            schema = "foo"
-
-            def connect(self, dburi):
-                return Mock()
-
-        with patch("yoyo.internalmigrations.upgrade"):
-            backend = MockPGBackend("", "")
-            backend.rollback()
-            assert backend.connection.cursor().execute.call_args == call(
-                "SET search_path TO foo"
-            )
-
     def test_postgresql_connects_with_schema(self):
         dburi = next(iter(get_test_dburis(only={"postgresql"})), None)
         if dburi is None:
