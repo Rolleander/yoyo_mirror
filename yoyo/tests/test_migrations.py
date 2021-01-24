@@ -265,6 +265,7 @@ def test_grouped_migrations_can_be_rolled_back(backend):
             backend.rollback_migrations(migrations)
             cursor = backend.execute("SELECT count(1) FROM p")
             assert cursor.fetchone() == (0,)
+            backend.rollback()
         backend.rollback_migrations(read_migrations(t1))
 
 
