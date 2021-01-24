@@ -31,7 +31,8 @@ import tms
 
 from yoyo import read_migrations
 from yoyo.config import get_configparser
-from yoyo.tests import with_migrations, dburi
+from yoyo.tests import dburi_sqlite3
+from yoyo.tests import with_migrations
 from yoyo.tests import migrations_dir
 from yoyo.tests import get_backend
 from yoyo.scripts.main import main, parse_args, LEGACY_CONFIG_FILENAME
@@ -88,29 +89,29 @@ class TestYoyoScript(TestInteractiveScript):
     @with_migrations()
     def test_it_sets_verbosity_level(self, tmpdir):
         with patch("yoyo.scripts.main.configure_logging") as m:
-            main(["apply", tmpdir, "--database", dburi])
+            main(["apply", tmpdir, "--database", dburi_sqlite3])
             assert m.call_args == call(0)
-            main(["-vvv", "apply", tmpdir, "--database", dburi])
+            main(["-vvv", "apply", tmpdir, "--database", dburi_sqlite3])
             assert m.call_args == call(3)
 
     @with_migrations()
     def test_it_prompts_to_create_config_file(self, tmpdir):
-        main(["apply", tmpdir, "--database", dburi])
+        main(["apply", tmpdir, "--database", dburi_sqlite3])
         assert "save migration config" in self.confirm.call_args[0][0].lower()
 
     @with_migrations()
     def test_it_creates_config_file(self, tmpdir):
         self.confirm.return_value = True
-        main(["apply", tmpdir, "--database", dburi])
+        main(["apply", tmpdir, "--database", dburi_sqlite3])
         assert os.path.exists("yoyo.ini")
         with open("yoyo.ini") as f:
-            assert "database = {0}".format(dburi) in f.read()
+            assert "database = {0}".format(dburi_sqlite3) in f.read()
 
     @with_migrations()
     def test_it_uses_config_file(self, tmpdir):
         self.writeconfig(batch_mode="on")
         with patch("yoyo.scripts.migrate.apply") as apply:
-            main(["apply", tmpdir, "--database", dburi])
+            main(["apply", tmpdir, "--database", dburi_sqlite3])
             args_used = apply.call_args[0][0]
             assert args_used.batch_mode is True
 
@@ -118,7 +119,7 @@ class TestYoyoScript(TestInteractiveScript):
     def test_it_ignores_config_file(self, tmpdir):
         self.writeconfig(batch_mode="on")
         with patch("yoyo.scripts.migrate.apply") as apply:
-            main(["apply", "--no-config-file", tmpdir, "--database", dburi])
+            main(["apply", "--no-config-file", tmpdir, "--database", dburi_sqlite3])
             args_used = apply.call_args[0][0]
             assert args_used.batch_mode is False
 
@@ -141,28 +142,28 @@ class TestYoyoScript(TestInteractiveScript):
         ) as prompt_migrations, patch(
             "yoyo.scripts.migrate.get_backend"
         ) as get_backend:
-            main(["apply", tmpdir, "--database", dburi])
+            main(["apply", tmpdir, "--database", dburi_sqlite3])
             migrations = get_backend().to_apply()
             assert migrations in prompt_migrations.call_args[0]
 
     @with_migrations()
     def test_it_applies_migrations(self, tmpdir):
         with patch("yoyo.scripts.migrate.get_backend") as get_backend:
-            main(["-b", "apply", tmpdir, "--database", dburi])
+            main(["-b", "apply", tmpdir, "--database", dburi_sqlite3])
             assert get_backend().rollback_migrations.call_count == 0
             assert get_backend().apply_migrations.call_count == 1
 
     @with_migrations()
     def test_it_rollsback_migrations(self, tmpdir):
         with patch("yoyo.scripts.migrate.get_backend") as get_backend:
-            main(["-b", "rollback", tmpdir, "--database", dburi])
+            main(["-b", "rollback", tmpdir, "--database", dburi_sqlite3])
             assert get_backend().rollback_migrations.call_count == 1
             assert get_backend().apply_migrations.call_count == 0
 
     @with_migrations()
     def test_it_reapplies_migrations(self, tmpdir):
         with patch("yoyo.scripts.migrate.get_backend") as get_backend:
-            main(["-b", "reapply", tmpdir, "--database", dburi])
+            main(["-b", "reapply", tmpdir, "--database", dburi_sqlite3])
             assert get_backend().rollback_migrations.call_count == 1
             assert get_backend().apply_migrations.call_count == 1
 
@@ -170,7 +171,7 @@ class TestYoyoScript(TestInteractiveScript):
     @with_migrations(m2='step("CREATE TABLE yoyo_test2 (id INT)")')
     def test_it_applies_from_multiple_sources(self, t1, t2):
         with patch("yoyo.backends.DatabaseBackend.apply_migrations") as apply:
-            main(["-b", "apply", t1, t2, "--database", dburi])
+            main(["-b", "apply", t1, t2, "--database", dburi_sqlite3])
             call_posargs, call_kwargs = apply.call_args
             migrations, _ = call_posargs
             assert [m.path for m in migrations] == [
@@ -220,7 +221,7 @@ class TestYoyoScript(TestInteractiveScript):
     @with_migrations()
     def test_it_forces_batch_mode_if_not_running_in_a_tty(self, tmpdir):
         with patch("sys.stdout", isatty=lambda: False):
-            main(["apply", tmpdir, "--database", dburi])
+            main(["apply", tmpdir, "--database", dburi_sqlite3])
             assert self.prompt.call_count == 0
             assert self.confirm.call_count == 0
 
@@ -416,14 +417,14 @@ class TestNewMigration(TestInteractiveScript):
 
     @with_migrations()
     def test_it_creates_an_empty_migration(self, tmpdir):
-        main(["new", "-b", "-m", "foo", tmpdir, "--database", dburi])
+        main(["new", "-b", "-m", "foo", tmpdir, "--database", dburi_sqlite3])
         assert any("-foo.py" in f for f in os.listdir(tmpdir))
 
     @with_migrations(
         m1="", m2='__depends__=["m1"]; step("INSERT INTO t VALUES (2)")', m3=""
     )
     def test_it_depends_on_all_current_heads(self, tmpdir):
-        main(["new", "-b", "-m", "foo", tmpdir, "--database", dburi])
+        main(["new", "-b", "-m", "foo", tmpdir, "--database", dburi_sqlite3])
         m = next(f for f in os.listdir(tmpdir) if "-foo.py" in f)
         with io.open(os.path.join(tmpdir, m), encoding="utf-8") as f:
             assert "__depends__ = {'m2', 'm3'}" in f.read()
@@ -431,8 +432,8 @@ class TestNewMigration(TestInteractiveScript):
     @with_migrations()
     def test_it_names_file_by_date_and_sequence(self, tmpdir):
         with frozendate.freeze(2001, 1, 1):
-            main(["new", "-b", "-m", "foo", tmpdir, "--database", dburi])
-            main(["new", "-b", "-m", "bar", tmpdir, "--database", dburi])
+            main(["new", "-b", "-m", "foo", tmpdir, "--database", dburi_sqlite3])
+            main(["new", "-b", "-m", "bar", tmpdir, "--database", dburi_sqlite3])
         names = [n for n in sorted(os.listdir(tmpdir)) if n.endswith(".py")]
         assert names[0].startswith("20010101_01_")
         assert names[0].endswith("-foo.py")
@@ -442,7 +443,7 @@ class TestNewMigration(TestInteractiveScript):
     @with_migrations()
     def test_it_invokes_correct_editor_binary_from_config(self, tmpdir):
         self.writeconfig(editor="vim {} -c +10")
-        main(["new", tmpdir, "--database", dburi])
+        main(["new", tmpdir, "--database", dburi_sqlite3])
         assert self.subprocess.call.call_args == call(
             [
                 "vim",
@@ -456,19 +457,19 @@ class TestNewMigration(TestInteractiveScript):
     def test_it_invokes_correct_editor_binary_from_env(self, tmpdir):
         # default to $VISUAL
         with patch("os.environ", {"EDITOR": "ed", "VISUAL": "visualed"}):
-            main(["new", tmpdir, "--database", dburi])
+            main(["new", tmpdir, "--database", dburi_sqlite3])
             assert self.subprocess.call.call_args == call(
                 ["visualed", tms.Unicode()]
             )
 
         # fallback to $EDITOR
         with patch("os.environ", {"EDITOR": "ed"}):
-            main(["new", tmpdir, "--database", dburi])
+            main(["new", tmpdir, "--database", dburi_sqlite3])
             assert self.subprocess.call.call_args == call(["ed", tms.Unicode()])
 
         # Otherwise, vi
         with patch("os.environ", {}):
-            main(["new", tmpdir, "--database", dburi]) == call(
+            main(["new", tmpdir, "--database", dburi_sqlite3]) == call(
                 ["vi", tms.Unicode()]
             )
 
@@ -483,7 +484,7 @@ class TestNewMigration(TestInteractiveScript):
                 f.write('"""\ntest docstring\nsplit over\n\nlines\n"""\n')
 
         self.subprocess.call = write_migration
-        main(["new", tmpdir, "--database", dburi])
+        main(["new", tmpdir, "--database", dburi_sqlite3])
         names = [n for n in sorted(os.listdir(tmpdir)) if n.endswith(".py")]
         assert "test-docstring" in names[0]
 
@@ -494,7 +495,7 @@ class TestNewMigration(TestInteractiveScript):
                 f.write("this is not valid python!")
 
         self.subprocess.call = write_migration
-        main(["new", tmpdir, "--database", dburi])
+        main(["new", tmpdir, "--database", dburi_sqlite3])
         prompts = [
             args[0].lower() for args, kwargs in self.prompt.call_args_list
         ]
@@ -502,7 +503,7 @@ class TestNewMigration(TestInteractiveScript):
 
     @with_migrations()
     def test_it_defaults_docstring_to_message(self, tmpdir):
-        main(["new", "-b", "-m", "your ad here", tmpdir, "--database", dburi])
+        main(["new", "-b", "-m", "your ad here", tmpdir, "--database", dburi_sqlite3])
         names = [n for n in sorted(os.listdir(tmpdir)) if n.endswith(".py")]
         with io.open(
             os.path.join(tmpdir, names[0]), "r", encoding="utf-8"
@@ -513,7 +514,7 @@ class TestNewMigration(TestInteractiveScript):
     def test_it_calls_post_create_command(self, tmpdir):
         self.writeconfig(post_create_command="/bin/ls -l {} {}")
         with frozendate.freeze(2001, 1, 1):
-            main(["new", "-b", tmpdir, "--database", dburi])
+            main(["new", "-b", tmpdir, "--database", dburi_sqlite3])
         is_filename = tms.Str(
             lambda s: os.path.basename(s).startswith("20010101_01_")
         )
@@ -524,7 +525,7 @@ class TestNewMigration(TestInteractiveScript):
     @with_migrations()
     def test_it_uses_configured_prefix(self, tmpdir):
         self.writeconfig(prefix="foo_")
-        main(["new", "-b", "-m", "bar", tmpdir, "--database", dburi])
+        main(["new", "-b", "-m", "bar", tmpdir, "--database", dburi_sqlite3])
         names = [n for n in sorted(os.listdir(tmpdir)) if n.endswith(".py")]
         assert re.match("foo_.*-bar", names[0]) is not None
 
@@ -539,7 +540,7 @@ class TestNewMigration(TestInteractiveScript):
                 "--sql",
                 tmpdir,
                 "--database",
-                dburi,
+                dburi_sqlite3,
             ]
         )
         name = next(n for n in sorted(os.listdir(tmpdir)) if n.endswith(".sql"))
@@ -557,7 +558,7 @@ class TestList(TestInteractiveScript):
     def get_output(self, migrations):
         with migrations_dir(**migrations) as tmpdir:
             with patch("sys.stdout", io.StringIO()) as captured:
-                main(["list", tmpdir, "--database", dburi])
+                main(["list", tmpdir, "--database", dburi_sqlite3])
             return captured.getvalue()
 
     def test_it_lists_migrations(self, tmpdir):

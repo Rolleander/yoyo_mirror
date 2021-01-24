@@ -22,7 +22,7 @@ import os.path
 from yoyo.config import get_configparser
 from yoyo.connections import get_backend
 
-dburi = "sqlite:///:memory:"
+dburi_sqlite3 = "sqlite:///:memory:"
 
 config_file = os.path.join(
     os.path.dirname(__file__), *("../../test_databases.ini".split("/"))
