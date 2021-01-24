@@ -53,7 +53,7 @@ class TestInteractiveScript(object):
         self.prompt_patch = patch("yoyo.utils.prompt", return_value="n")
         self.prompt = self.prompt_patch.start()
         self.tmpdir = mkdtemp()
-        self.dburi = "sqlite:////" + self.tmpdir + "db.sqlite"
+        self.dburi = "sqlite:///" + self.tmpdir + "db.sqlite"
         self.saved_cwd = os.getcwd()
         os.chdir(self.tmpdir)
 

@@ -108,7 +108,8 @@ def test_connections(get_dbapi_module):
             backends.SQLiteBackend,
             "sqlite3",
             call(
-                "northwind?cache=shared",
+                "file:northwind?cache=shared",
+                uri=True,
                 detect_types=get_dbapi_module("sqlite3").PARSE_DECLTYPES,
             ),
         ),

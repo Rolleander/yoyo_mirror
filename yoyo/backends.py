@@ -683,7 +683,8 @@ class SQLiteBackend(DatabaseBackend):
         # Ensure that multiple connections share the same data
         # https://sqlite.org/sharedcache.html
         conn = self.driver.connect(
-            f"{dburi.database}?cache=shared",
+            f"file:{dburi.database}?cache=shared",
+            uri=True,
             detect_types=self.driver.PARSE_DECLTYPES
         )
         conn.isolation_level = None
