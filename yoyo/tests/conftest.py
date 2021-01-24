@@ -2,16 +2,16 @@ import pytest
 
 from yoyo import backends
 from yoyo.connections import get_backend
+from yoyo.tests import dburi_sqlite3
 from yoyo.tests import get_test_backends
 from yoyo.tests import get_test_dburis
 
 
-@pytest.fixture(params=get_test_dburis())
-def backend(request):
+def _backend(dburi):
     """
-    Return all backends configured in ``test_databases.ini``
+    Return a backend configured in ``test_databases.ini``
     """
-    backend = get_backend(request.param)
+    backend = get_backend(dburi)
     with backend.transaction():
         if backend.__class__ is backends.MySQLBackend:
             backend.execute(
@@ -26,6 +26,19 @@ def backend(request):
     finally:
         backend.rollback()
         drop_yoyo_tables(backend)
+
+
+@pytest.fixture(params=get_test_dburis())
+def backend(request):
+    """
+    Return all backends configured in ``test_databases.ini``
+    """
+    yield from _backend(request.param)
+
+
+@pytest.fixture()
+def backend_sqlite3(request):
+    yield from _backend(dburi_sqlite3)
 
 
 @pytest.fixture(params=get_test_dburis())
