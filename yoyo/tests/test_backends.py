@@ -13,7 +13,6 @@ from yoyo import exceptions
 from yoyo.connections import get_backend
 from yoyo.tests import get_test_backends
 from yoyo.tests import get_test_dburis
-from yoyo.tests import with_migrations
 from yoyo.tests import migrations_dir
 
 
@@ -112,15 +111,7 @@ class TestTransactionHandling(object):
         ]
         assert count_b == 0
 
-    @with_migrations(
-        a="""
-        __transactional__ = False
-        step('CREATE DATABASE yoyo_test_tmp',
-             'DROP DATABASE yoyo_test_tmp',
-             )
-    """
-    )
-    def test_statements_requiring_no_transaction(self, tmpdir):
+    def test_statements_requiring_no_transaction(self):
         """
         PostgreSQL will error if certain statements (eg CREATE DATABASE)
         are run within a transaction block.
@@ -128,37 +119,44 @@ class TestTransactionHandling(object):
         As far as I know this behavior is PostgreSQL specific. We can't run
         this test in sqlite or oracle as they do not support CREATE DATABASE.
         """
-        for backend in get_test_backends(exclude={"sqlite", "oracle"}):
-            migrations = read_migrations(tmpdir)
-            backend.apply_migrations(migrations)
-            backend.rollback_migrations(migrations)
+        with migrations_dir(
+            a="""
+            __transactional__ = False
+            step('CREATE DATABASE yoyo_test_tmp',
+                'DROP DATABASE yoyo_test_tmp',
+                )
+        """
+        ) as tmpdir:
+            for backend in get_test_backends(exclude={"sqlite", "oracle"}):
+                migrations = read_migrations(tmpdir)
+                backend.apply_migrations(migrations)
+                backend.rollback_migrations(migrations)
 
-    @with_migrations(
-        a="""
-        __transactional__ = False
-        def reopen_db(conn):
-            import sqlite3
-            for _, db, filename in conn.execute('PRAGMA database_list'):
-                if db == 'main':
-                     reconn = sqlite3.connect(filename)
-                     reconn.execute("CREATE TABLE yoyo_test_b (id int)")
-                     break
-            else:
-                raise AssertionError("sqlite main database not found")
-
-        step('CREATE TABLE yoyo_test_a (id int)')
-        step(reopen_db)
-        step('CREATE TABLE yoyo_test_c (id int)')
-    """
-    )
-    def test_disabling_transactions_in_sqlite(self, tmpdir):
+    def test_disabling_transactions_in_sqlite(self):
         """
         Transactions cause sqlite databases to become locked, preventing
         other tools from accessing them:
 
         https://bitbucket.org/ollyc/yoyo/issues/43/run-step-outside-of-transaction
         """
-        with NamedTemporaryFile() as tmp:
+        with migrations_dir(
+            a="""
+            __transactional__ = False
+            def reopen_db(conn):
+                import sqlite3
+                for _, db, filename in conn.execute('PRAGMA database_list'):
+                    if db == 'main':
+                        reconn = sqlite3.connect(filename)
+                        reconn.execute("CREATE TABLE yoyo_test_b (id int)")
+                        break
+                else:
+                    raise AssertionError("sqlite main database not found")
+
+            step('CREATE TABLE yoyo_test_a (id int)')
+            step(reopen_db)
+            step('CREATE TABLE yoyo_test_c (id int)')
+        """
+        ) as tmpdir, NamedTemporaryFile() as tmp:
             backend = get_backend("sqlite:///" + tmp.name)
             backend.apply_migrations(read_migrations(tmpdir))
             assert "yoyo_test_a" in backend.list_tables()

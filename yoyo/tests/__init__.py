@@ -100,5 +100,4 @@ def tempdir():
         rmtree(tmpdir)
 
 
-with_migrations = MigrationsContextManager
 migrations_dir = MigrationsContextManager

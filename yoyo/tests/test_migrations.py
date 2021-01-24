@@ -26,119 +26,122 @@ from yoyo import read_migrations
 from yoyo import exceptions
 from yoyo import ancestors, descendants
 
-from yoyo.tests import with_migrations, migrations_dir, dburi_sqlite3
+from yoyo.tests import migrations_dir, dburi_sqlite3
 from yoyo.tests import clear_database
 from yoyo.tests import tempdir
 from yoyo.migrations import topological_sort, MigrationList
 from yoyo.scripts import newmigration
 
 
-@with_migrations(
-    """
-    step("CREATE TABLE yoyo_test (id INT)")
-    """,
-    """
-step("INSERT INTO yoyo_test VALUES (1)")
-step("INSERT INTO yoyo_test VALUES ('x', 'y')")
-    """,
-)
-def test_transaction_is_not_committed_on_error(tmpdir):
-    backend = get_backend(dburi_sqlite3)
-    try:
-        migrations = read_migrations(tmpdir)
-        with pytest.raises(backend.DatabaseError):
+def test_transaction_is_not_committed_on_error():
+    with migrations_dir(
+        'step("CREATE TABLE yoyo_test (id INT)")',
+        """
+        step("INSERT INTO yoyo_test VALUES (1)")
+        step("INSERT INTO yoyo_test VALUES ('x', 'y')")
+        """,
+    ) as tmpdir:
+        backend = get_backend(dburi_sqlite3)
+        try:
+            migrations = read_migrations(tmpdir)
+            with pytest.raises(backend.DatabaseError):
+                backend.apply_migrations(migrations)
+            backend.rollback()
+            cursor = backend.cursor()
+            cursor.execute("SELECT count(1) FROM yoyo_test")
+            assert cursor.fetchone() == (0,)
+        finally:
+            clear_database(backend)
+
+
+def test_rollbacks_happen_in_reverse():
+    with migrations_dir(
+        'step("CREATE TABLE yoyo_test (id INT)")',
+        """
+        step(
+            "INSERT INTO yoyo_test VALUES (1)", "DELETE FROM yoyo_test WHERE id=1"
+        )
+        step(
+            "UPDATE yoyo_test SET id=2 WHERE id=1",
+            "UPDATE yoyo_test SET id=1 WHERE id=2"
+        )
+        """,
+    ) as tmpdir:
+        try:
+            backend = get_backend(dburi_sqlite3)
+            migrations = read_migrations(tmpdir)
             backend.apply_migrations(migrations)
-        backend.rollback()
-        cursor = backend.cursor()
-        cursor.execute("SELECT count(1) FROM yoyo_test")
-        assert cursor.fetchone() == (0,)
-    finally:
-        clear_database(backend)
+            cursor = backend.cursor()
+            cursor.execute("SELECT * FROM yoyo_test")
+            assert cursor.fetchall() == [(2,)]
+            backend.rollback_migrations(migrations)
+            cursor.execute("SELECT * FROM yoyo_test")
+            assert cursor.fetchall() == []
+        finally:
+            clear_database(backend)
 
 
-@with_migrations(
-    'step("CREATE TABLE yoyo_test (id INT)")',
-    """
-step("INSERT INTO yoyo_test VALUES (1)", "DELETE FROM yoyo_test WHERE id=1")
-step("UPDATE yoyo_test SET id=2 WHERE id=1", "UPDATE yoyo_test SET id=1 WHERE id=2")
-    """,
-)
-def test_rollbacks_happen_in_reverse(tmpdir):
-    try:
+def test_execution_continues_with_ignore_errors():
+    with migrations_dir(
+        """
+        step("CREATE TABLE yoyo_test (id INT)")
+        step("INSERT INTO yoyo_test VALUES (1)")
+        step("INSERT INTO yoyo_test VALUES ('a', 'b')", ignore_errors='all')
+        step("INSERT INTO yoyo_test VALUES (2)")
+        """
+    ) as tmpdir:
+        try:
+            backend = get_backend(dburi_sqlite3)
+            migrations = read_migrations(tmpdir)
+            backend.apply_migrations(migrations)
+            cursor = backend.cursor()
+            cursor.execute("SELECT * FROM yoyo_test")
+            assert cursor.fetchall() == [(1,), (2,)]
+        finally:
+            clear_database(backend)
+
+
+def test_execution_continues_with_ignore_errors_in_transaction():
+    with migrations_dir(
+        """
+        from yoyo import step, group
+        step("CREATE TABLE yoyo_test (id INT)")
+        group(
+            step("INSERT INTO yoyo_test VALUES (1)"),
+            step("INSERT INTO yoyo_test VALUES ('a', 'b')"),
+            ignore_errors='all'
+        )
+        step("INSERT INTO yoyo_test VALUES (2)")
+        """
+    ) as tmpdir:
         backend = get_backend(dburi_sqlite3)
         migrations = read_migrations(tmpdir)
         backend.apply_migrations(migrations)
         cursor = backend.cursor()
         cursor.execute("SELECT * FROM yoyo_test")
         assert cursor.fetchall() == [(2,)]
-        backend.rollback_migrations(migrations)
-        cursor.execute("SELECT * FROM yoyo_test")
-        assert cursor.fetchall() == []
-    finally:
-        clear_database(backend)
 
 
-@with_migrations(
-    """
-    step("CREATE TABLE yoyo_test (id INT)")
-    step("INSERT INTO yoyo_test VALUES (1)")
-    step("INSERT INTO yoyo_test VALUES ('a', 'b')", ignore_errors='all')
-    step("INSERT INTO yoyo_test VALUES (2)")
-    """
-)
-def test_execution_continues_with_ignore_errors(tmpdir):
-    try:
+def test_rollbackignores_errors():
+    with migrations_dir(
+        """
+        step("CREATE TABLE yoyo_test (id INT)")
+        step("INSERT INTO yoyo_test VALUES (1)",
+            "DELETE FROM yoyo_test WHERE id=2")
+        step("UPDATE yoyo_test SET id=2 WHERE id=1",
+            "SELECT nonexistent FROM imaginary", ignore_errors='rollback')
+        """
+    ) as tmpdir:
         backend = get_backend(dburi_sqlite3)
         migrations = read_migrations(tmpdir)
         backend.apply_migrations(migrations)
         cursor = backend.cursor()
         cursor.execute("SELECT * FROM yoyo_test")
-        assert cursor.fetchall() == [(1,), (2,)]
-    finally:
-        clear_database(backend)
+        assert cursor.fetchall() == [(2,)]
 
-
-@with_migrations(
-    """
-    from yoyo import step, group
-    step("CREATE TABLE yoyo_test (id INT)")
-    group(
-        step("INSERT INTO yoyo_test VALUES (1)"),
-        step("INSERT INTO yoyo_test VALUES ('a', 'b')"),
-        ignore_errors='all'
-    )
-    step("INSERT INTO yoyo_test VALUES (2)")
-    """
-)
-def test_execution_continues_with_ignore_errors_in_transaction(tmpdir):
-    backend = get_backend(dburi_sqlite3)
-    migrations = read_migrations(tmpdir)
-    backend.apply_migrations(migrations)
-    cursor = backend.cursor()
-    cursor.execute("SELECT * FROM yoyo_test")
-    assert cursor.fetchall() == [(2,)]
-
-
-@with_migrations(
-    """
-    step("CREATE TABLE yoyo_test (id INT)")
-    step("INSERT INTO yoyo_test VALUES (1)",
-         "DELETE FROM yoyo_test WHERE id=2")
-    step("UPDATE yoyo_test SET id=2 WHERE id=1",
-         "SELECT nonexistent FROM imaginary", ignore_errors='rollback')
-    """
-)
-def test_rollbackignores_errors(tmpdir):
-    backend = get_backend(dburi_sqlite3)
-    migrations = read_migrations(tmpdir)
-    backend.apply_migrations(migrations)
-    cursor = backend.cursor()
-    cursor.execute("SELECT * FROM yoyo_test")
-    assert cursor.fetchall() == [(2,)]
-
-    backend.rollback_migrations(migrations)
-    cursor.execute("SELECT * FROM yoyo_test")
-    assert cursor.fetchall() == []
+        backend.rollback_migrations(migrations)
+        cursor.execute("SELECT * FROM yoyo_test")
+        assert cursor.fetchall() == []
 
 
 def test_migration_is_committed(backend):
@@ -146,19 +149,20 @@ def test_migration_is_committed(backend):
         migrations = read_migrations(tmpdir)
         backend.apply_migrations(migrations)
 
-    backend.rollback()
-    rows = backend.execute("SELECT * FROM yoyo_test").fetchall()
-    assert list(rows) == []
+        backend.rollback()
+        rows = backend.execute("SELECT * FROM yoyo_test").fetchall()
+        assert list(rows) == []
 
 
 def test_rollback_happens_on_step_failure(backend):
     with migrations_dir(
         """
-                        step("",
-                             "CREATE TABLE yoyo_is_rolledback (i INT)"),
-                        step("CREATE TABLE yoyo_test (s VARCHAR(100))",
-                             "DROP TABLE yoyo_test")
-                        step("invalid sql!")"""
+        step("",
+                "CREATE TABLE yoyo_is_rolledback (i INT)"),
+        step("CREATE TABLE yoyo_test (s VARCHAR(100))",
+                "DROP TABLE yoyo_test")
+        step("invalid sql!")
+        """
     ) as tmpdir:
         migrations = read_migrations(tmpdir)
         with pytest.raises(backend.DatabaseError):
@@ -180,87 +184,87 @@ def test_rollback_happens_on_step_failure(backend):
         assert list(cursor.fetchall()) == []
 
 
-@with_migrations(
-    """
-    step("CREATE TABLE yoyo_test (id INT)")
-    step("DROP TABLE yoyo_test")
-    """
-)
 def test_specify_migration_table(tmpdir, dburi):
-    backend = get_backend(dburi, migration_table="another_migration_table")
-    migrations = read_migrations(tmpdir)
-    backend.apply_migrations(migrations)
-    cursor = backend.cursor()
-    cursor.execute("SELECT migration_id FROM another_migration_table")
-    assert cursor.fetchall() == [("0",)]
+    with migrations_dir(
+        """
+        step("CREATE TABLE yoyo_test (id INT)")
+        step("DROP TABLE yoyo_test")
+        """
+    ) as tmpdir:
+        backend = get_backend(dburi, migration_table="another_migration_table")
+        migrations = read_migrations(tmpdir)
+        backend.apply_migrations(migrations)
+        cursor = backend.cursor()
+        cursor.execute("SELECT migration_id FROM another_migration_table")
+        assert cursor.fetchall() == [("0",)]
 
 
-@with_migrations(
-    """
-    def foo(conn):
-        conn.cursor().execute("CREATE TABLE foo_test (id INT)")
-        conn.cursor().execute("INSERT INTO foo_test VALUES (1)")
-    def bar(conn):
-        foo(conn)
-    step(bar)
-    """
-)
-def test_migration_functions_have_namespace_access(tmpdir):
+def test_migration_functions_have_namespace_access():
     """
     Test that functions called via step have access to the script namespace
     """
-    backend = get_backend(dburi_sqlite3)
-    migrations = read_migrations(tmpdir)
-    backend.apply_migrations(migrations)
-    cursor = backend.cursor()
-    cursor.execute("SELECT id FROM foo_test")
-    assert cursor.fetchall() == [(1,)]
-
-
-@with_migrations(
-    """
-    from yoyo import group, step
-    step("CREATE TABLE yoyo_test (id INT)")
-    group(step("INSERT INTO yoyo_test VALUES (1)")),
-    """
-)
-def test_migrations_can_import_step_and_group(tmpdir):
-    backend = get_backend(dburi_sqlite3)
-    migrations = read_migrations(tmpdir)
-    backend.apply_migrations(migrations)
-    cursor = backend.cursor()
-    cursor.execute("SELECT id FROM yoyo_test")
-    assert cursor.fetchall() == [(1,)]
-
-
-@with_migrations(
-    """
-    step("CREATE TABLE yoyo_test (id INT, c VARCHAR(1))")
-    step("INSERT INTO yoyo_test VALUES (1, 'a')")
-    step("INSERT INTO yoyo_test VALUES (2, 'b')")
-    step("SELECT * FROM yoyo_test")
-    """
-)
-def test_migrations_display_selected_data(tmpdir):
-    backend = get_backend(dburi_sqlite3)
-    migrations = read_migrations(tmpdir)
-    with patch("yoyo.migrations.sys.stdout") as stdout:
+    with migrations_dir(
+        """
+        def foo(conn):
+            conn.cursor().execute("CREATE TABLE foo_test (id INT)")
+            conn.cursor().execute("INSERT INTO foo_test VALUES (1)")
+        def bar(conn):
+            foo(conn)
+        step(bar)
+        """
+    ) as tmpdir:
+        backend = get_backend(dburi_sqlite3)
+        migrations = read_migrations(tmpdir)
         backend.apply_migrations(migrations)
-        written = "".join(a[0] for a, kw in stdout.write.call_args_list)
-        assert written == (
-            " id | c \n" "----+---\n" " 1  | a \n" " 2  | b \n" "(2 rows)\n"
-        )
+        cursor = backend.cursor()
+        cursor.execute("SELECT id FROM foo_test")
+        assert cursor.fetchall() == [(1,)]
+
+
+def test_migrations_can_import_step_and_group():
+    with migrations_dir(
+        """
+        from yoyo import group, step
+        step("CREATE TABLE yoyo_test (id INT)")
+        group(step("INSERT INTO yoyo_test VALUES (1)")),
+        """
+    ) as tmpdir:
+        backend = get_backend(dburi_sqlite3)
+        migrations = read_migrations(tmpdir)
+        backend.apply_migrations(migrations)
+        cursor = backend.cursor()
+        cursor.execute("SELECT id FROM yoyo_test")
+        assert cursor.fetchall() == [(1,)]
+
+
+def test_migrations_display_selected_data():
+    with migrations_dir(
+        """
+        step("CREATE TABLE yoyo_test (id INT, c VARCHAR(1))")
+        step("INSERT INTO yoyo_test VALUES (1, 'a')")
+        step("INSERT INTO yoyo_test VALUES (2, 'b')")
+        step("SELECT * FROM yoyo_test")
+        """
+    ) as tmpdir:
+        backend = get_backend(dburi_sqlite3)
+        migrations = read_migrations(tmpdir)
+        with patch("yoyo.migrations.sys.stdout") as stdout:
+            backend.apply_migrations(migrations)
+            written = "".join(a[0] for a, kw in stdout.write.call_args_list)
+            assert written == (
+                " id | c \n" "----+---\n" " 1  | a \n" " 2  | b \n" "(2 rows)\n"
+            )
 
 
 def test_grouped_migrations_can_be_rolled_back(backend):
-    with with_migrations(
+    with migrations_dir(
         a="from yoyo import step\n"
         'steps = [step("CREATE TABLE p (n INT)",'
         '              "DROP TABLE p")]'
     ) as t1:
         backend.apply_migrations(read_migrations(t1))
 
-        with with_migrations(
+        with migrations_dir(
             b="from yoyo import group\n"
             "from yoyo import step\n"
             "steps = [\n"
@@ -428,41 +432,43 @@ class TestAncestorsDescendants(object):
 
 
 class TestReadMigrations(object):
-    @with_migrations(**{newmigration.tempfile_prefix + "test": ""})
-    def test_it_ignores_yoyo_new_tmp_files(self, tmpdir):
+    def test_it_ignores_yoyo_new_tmp_files(self):
         """
         The yoyo new command creates temporary files in the migrations directory.
         These shouldn't be picked up by yoyo apply etc
         """
-        assert len(read_migrations(tmpdir)) == 0
+        with migrations_dir(
+            **{newmigration.tempfile_prefix + "test": ""}
+        ) as tmpdir:
+            assert len(read_migrations(tmpdir)) == 0
 
-    @with_migrations(**{"post-apply": """step('SELECT 1')"""})
-    def test_it_loads_post_apply_scripts(self, tmpdir):
-        migrations = read_migrations(tmpdir)
-        assert len(migrations) == 0
+    def test_it_loads_post_apply_scripts(self):
+        with migrations_dir(**{"post-apply": "step('SELECT 1')"}) as tmpdir:
+            migrations = read_migrations(tmpdir)
+            assert len(migrations) == 0
         assert len(migrations.post_apply) == 1
 
-    @with_migrations(**{"a": """step('SELECT 1')"""})
-    def test_it_does_not_add_duplicate_steps(self, tmpdir):
-        m = read_migrations(tmpdir)[0]
-        m.load()
-        assert len(m.steps) == 1
+    def test_it_does_not_add_duplicate_steps(self):
+        with migrations_dir("step('SELECT 1')") as tmpdir:
+            m = read_migrations(tmpdir)[0]
+            m.load()
+            assert len(m.steps) == 1
 
-        m = read_migrations(tmpdir)[0]
-        m.load()
-        assert len(m.steps) == 1
+            m = read_migrations(tmpdir)[0]
+            m.load()
+            assert len(m.steps) == 1
 
-    @with_migrations(**{"a": """from yoyo import step; step('SELECT 1')"""})
     def test_it_does_not_add_duplicate_steps_with_imported_symbols(
         self, tmpdir
     ):
-        m = read_migrations(tmpdir)[0]
-        m.load()
-        assert len(m.steps) == 1
+        with migrations_dir(a="from yoyo import step; step('SELECT 1')") as tmpdir:
+            m = read_migrations(tmpdir)[0]
+            m.load()
+            assert len(m.steps) == 1
 
-        m = read_migrations(tmpdir)[0]
-        m.load()
-        assert len(m.steps) == 1
+            m = read_migrations(tmpdir)[0]
+            m.load()
+            assert len(m.steps) == 1
 
     def test_it_reads_from_package_data(self):
         migrations = read_migrations("package:yoyo:tests/migrations")
@@ -594,32 +600,32 @@ class TestPostApplyHooks(object):
             _apply_migrations()
             assert count_postapply_calls() == 2
 
-    @with_migrations(
-        **{
-            "a": "step('create table postapply (i int)')",
-            "post-apply": "step('insert into postapply values (1)')",
-            "post-apply2": "step('insert into postapply values (2)')",
-        }
-    )
-    def test_it_runs_multiple_post_apply_hooks(self, tmpdir):
-        backend = get_backend(dburi_sqlite3)
-        backend.apply_migrations(backend.to_apply(read_migrations(tmpdir)))
-        cursor = backend.cursor()
-        cursor.execute("SELECT * FROM postapply")
-        assert cursor.fetchall() == [(1,), (2,)]
+    def test_it_runs_multiple_post_apply_hooks(self):
+        with migrations_dir(
+            **{
+                "a": "step('create table postapply (i int)')",
+                "post-apply": "step('insert into postapply values (1)')",
+                "post-apply2": "step('insert into postapply values (2)')",
+            }
+        ) as tmpdir:
+            backend = get_backend(dburi_sqlite3)
+            backend.apply_migrations(backend.to_apply(read_migrations(tmpdir)))
+            cursor = backend.cursor()
+            cursor.execute("SELECT * FROM postapply")
+            assert cursor.fetchall() == [(1,), (2,)]
 
-    @with_migrations(
-        **{
-            "a": "step('create table postapply (i int)')",
-            "post-apply": "step('insert into postapply values (1)')",
-        }
-    )
-    def test_apply_migrations_only_does_not_run_hooks(self, tmpdir):
-        backend = get_backend(dburi_sqlite3)
-        backend.apply_migrations_only(backend.to_apply(read_migrations(tmpdir)))
-        cursor = backend.cursor()
-        cursor.execute("SELECT * FROM postapply")
-        assert cursor.fetchall() == []
+    def test_apply_migrations_only_does_not_run_hooks(self, backend):
+        with migrations_dir(
+            **{
+                "a": "step('create table postapply (i int)')",
+                "post-apply": "step('insert into postapply values (1)')",
+            }
+        ) as tmpdir:
+            backend = get_backend(dburi_sqlite3)
+            backend.apply_migrations_only(backend.to_apply(read_migrations(tmpdir)))
+            cursor = backend.cursor()
+            cursor.execute("SELECT * FROM postapply")
+            assert cursor.fetchall() == []
 
 
 class TestLogging(object):
@@ -639,9 +645,7 @@ class TestLogging(object):
         return backend.execute("SELECT count(1) FROM _yoyo_log").fetchone()[0]
 
     def test_it_logs_apply_and_rollback(self, backend):
-        with with_migrations(
-            a='step("CREATE TABLE yoyo_test (id INT)")'
-        ) as tmpdir:
+        with migrations_dir(a='step("CREATE TABLE yoyo_test (id INT)")') as tmpdir:
             migrations = read_migrations(tmpdir)
             backend.apply_migrations(migrations)
             assert self.get_log_count(backend) == 1
@@ -661,9 +665,7 @@ class TestLogging(object):
             assert logged["created_at_utc"] >= apply_time
 
     def test_it_logs_mark_and_unmark(self, backend):
-        with with_migrations(
-            a='step("CREATE TABLE yoyo_test (id INT)")'
-        ) as tmpdir:
+        with migrations_dir(a='step("CREATE TABLE yoyo_test (id INT)")') as tmpdir:
             migrations = read_migrations(tmpdir)
             backend.mark_migrations(migrations)
             assert self.get_log_count(backend) == 1
