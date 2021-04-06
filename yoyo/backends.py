@@ -159,7 +159,7 @@ class DatabaseBackend(object):
     _is_locked = False
     _in_transaction = False
     _internal_schema_updated = False
-    _transactional_ddl_cache: Dict[str, bool] = {}
+    _transactional_ddl_cache: Dict[bytes, bool] = {}
 
     def __init__(self, dburi, migration_table):
         self.uri = dburi

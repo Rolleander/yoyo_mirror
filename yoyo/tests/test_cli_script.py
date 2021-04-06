@@ -182,7 +182,7 @@ class TestYoyoScript(TestInteractiveScript):
 
     def test_it_offers_to_upgrade(self, tmpdir):
         legacy_config_path = os.path.join(str(tmpdir), LEGACY_CONFIG_FILENAME)
-        with io.open(legacy_config_path, "w", encoding="utf-8") as f:
+        with open(legacy_config_path, "w", encoding="utf-8") as f:
             f.write("[DEFAULT]\n")
             f.write("migration_table=_yoyo_migration\n")
             f.write("dburi=sqlite:///\n")
@@ -206,7 +206,7 @@ class TestYoyoScript(TestInteractiveScript):
 
     def test_it_upgrades_migration_table_None(self, tmpdir):
         legacy_config_path = os.path.join(str(tmpdir), LEGACY_CONFIG_FILENAME)
-        with io.open(legacy_config_path, "w", encoding="utf-8") as f:
+        with open(legacy_config_path, "w", encoding="utf-8") as f:
             f.write("[DEFAULT]\n")
             f.write("migration_table=None\n")
             f.write("dburi=sqlite:///\n")
@@ -425,7 +425,7 @@ class TestNewMigration(TestInteractiveScript):
         ) as tmpdir:
             main(["new", "-b", "-m", "foo", tmpdir, "--database", dburi_sqlite3])
             m = next(f for f in os.listdir(tmpdir) if "-foo.py" in f)
-            with io.open(os.path.join(tmpdir, m), encoding="utf-8") as f:
+            with open(os.path.join(tmpdir, m), encoding="utf-8") as f:
                 assert "__depends__ = {'m2', 'm3'}" in f.read()
 
     def test_it_names_file_by_date_and_sequence(self, tmpdir):
@@ -479,7 +479,7 @@ class TestNewMigration(TestInteractiveScript):
 
     def test_it_pulls_message_from_docstring(self, tmpdir):
         def write_migration(argv):
-            with io.open(argv[-1], "w", encoding="utf8") as f:
+            with open(argv[-1], "w", encoding="utf8") as f:
                 f.write('"""\ntest docstring\nsplit over\n\nlines\n"""\n')
 
         self.subprocess.call = write_migration
@@ -489,7 +489,7 @@ class TestNewMigration(TestInteractiveScript):
 
     def test_it_prompts_to_reedit_bad_migration(self, tmpdir):
         def write_migration(argv):
-            with io.open(argv[-1], "w", encoding="utf8") as f:
+            with open(argv[-1], "w", encoding="utf8") as f:
                 f.write("this is not valid python!")
 
         self.subprocess.call = write_migration
@@ -512,7 +512,7 @@ class TestNewMigration(TestInteractiveScript):
             ]
         )
         names = [n for n in sorted(os.listdir(tmpdir)) if n.endswith(".py")]
-        with io.open(
+        with open(
             os.path.join(str(tmpdir), names[0]), "r", encoding="utf-8"
         ) as f:
             assert "your ad here" in f.read()
@@ -549,7 +549,7 @@ class TestNewMigration(TestInteractiveScript):
                 ]
             )
             name = next(n for n in sorted(os.listdir(tmpdir)) if n.endswith(".sql"))
-            with io.open(os.path.join(tmpdir, name), "r", encoding="utf-8") as f:
+            with open(os.path.join(tmpdir, name), "r", encoding="utf-8") as f:
                 assert f.read() == textwrap.dedent(
                     """\
                     -- comment
