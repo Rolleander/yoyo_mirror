@@ -181,7 +181,7 @@ def test_specify_migration_table(tmpdir, dburi):
         backend.apply_migrations(migrations)
         cursor = backend.cursor()
         cursor.execute("SELECT migration_id FROM another_migration_table")
-        assert cursor.fetchall() == [("0",)]
+        assert list(cursor.fetchall()) == [("0",)]
 
 
 def test_migration_functions_have_namespace_access(backend_sqlite3):
