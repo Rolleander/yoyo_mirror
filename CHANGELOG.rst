@@ -1,3 +1,11 @@
+7.3.2
+-----
+
+* Bugfix: fix errors arising when migration code changes connection parameters,
+  for example the schema search path in PostgreSQL. Yoyo now uses a separate
+  database connection for running migrations than for updating its internal
+  metadata tables.
+
 7.3.1 (released 2021-01-18)
 ---------------------------
 
