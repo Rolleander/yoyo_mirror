@@ -791,7 +791,7 @@ class SnowflakeBackend(DatabaseBackend):
             account=dburi.hostname,
             database=database,
             schema=schema,
-            warehouse=dburi.args["warehouse"],
+            **dburi.args,
         )
 
     def savepoint(self, id):
