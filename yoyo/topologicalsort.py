@@ -4,6 +4,15 @@ from typing import Callable
 from typing import Iterable
 
 
+class CycleError(ValueError):
+    """
+    Raised when cycles exist in the input graph.
+
+    The second element in the args attribute of instances will contain the
+    sequence of nodes in which the cycle lies.
+    """
+
+
 def gapotchenko_topological_sort(
     iterable: Iterable[Any],
     is_arrow: Callable[[Any, Any], bool],
@@ -18,6 +27,8 @@ def gapotchenko_topological_sort(
     :param iterable: an ordered iterable of vertices
     :param is_arrow: a callable(v1, v2) that returns True if there is an arrow
                      from v1 to v2
+    :param raise_on_cycle: If true, raise a CycleError if a circular dependency
+                           if found.
     """
     vertices = list(iterable)
 
@@ -49,17 +60,13 @@ def gapotchenko_topological_sort(
                         break  # restart
                     # it is a cycle
                     if raise_on_cycle:
-                        raise ValueError(
-                            "Circular dependencies between {}".format(
-                                ", ".join(m.id for m in vertices if m in tc[vi])
-                            )
+                        raise CycleError(
+                            "Input graph contains a cycle",
+                            [v for v in vertices if v in tc[vi]],
                         )
             else:
                 if raise_on_cycle and is_arrow(vi, vi):
-                    # a degenerate cycle
-                    raise ValueError(
-                        "Circular dependencies between {}".format(vi.id)
-                    )
+                    raise CycleError("Input graph contains a cycle", [vi])
                 continue
             break
         else:

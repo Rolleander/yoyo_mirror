@@ -728,5 +728,9 @@ def topological_sort(migration_list: Iterable[Migration]) -> Iterable[Migration]
         return topologicalsort.gapotchenko_topological_sort(
             migration_list, lambda x, y: y in x.depends, raise_on_cycle=True
         )
-    except ValueError as e:
-        raise exceptions.BadMigration from e
+    except topologicalsort.CycleError as e:
+        raise exceptions.BadMigration(
+            "Circular dependency found in the following migrations: {}".format(
+                ", ".join(m.id for m in e.args[1])
+            )
+        ) from e
