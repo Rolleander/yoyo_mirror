@@ -22,6 +22,8 @@ from itertools import chain
 from itertools import count
 from itertools import zip_longest
 from logging import getLogger
+from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -721,7 +723,12 @@ def heads(migration_list):
     return heads
 
 
-def _gapotchenko_topological_sort(iterable, is_arrow, *, raise_on_cycle=False):
+def _gapotchenko_topological_sort(
+    iterable: Iterable[Any],
+    is_arrow: Callable[[Any, Any], bool],
+    *,
+    raise_on_cycle: bool = False
+):
     # iterable: an ordered iterable of vertices
     # is_arrow: a callable(vertex1, vertex2) that is True, if there
     #           is an arrow from vertex1 to vertex2
