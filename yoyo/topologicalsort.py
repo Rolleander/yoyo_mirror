@@ -31,27 +31,11 @@ def gapotchenko_topological_sort(
                            if found.
     """
     vertices = list(iterable)
+    tc = transitive_closure(vertices, is_arrow)
 
-    # compute the transitive closure (= reach-ability)
-    # using a recursive depth first search (DFS)
-    tc = defaultdict(set)
-
-    def dfs(s, v):
-        # Mark reachability from start to v as true.
-        s.add(v)
-        # Find all the vertices reachable through v
-        for vv in vertices:
-            if vv not in s and is_arrow(v, vv):
-                dfs(s, vv)
-
-    for v in vertices:
-        dfs(tc[v], v)
-
-    # And now the algorithm given by Oleksiy Gapotchenko
     while True:
         for i, vi in enumerate(vertices):
-            for j in range(i):
-                vj = vertices[j]
+            for j, vj in enumerate(vertices[:i]):
                 if is_arrow(vj, vi):
                     if vj not in tc[vi]:
                         # vj is not in the transitive closure of vi --> no cycle
@@ -71,3 +55,27 @@ def gapotchenko_topological_sort(
             break
         else:
             return vertices
+
+
+def child_vertices(vs, is_arrow, v):
+    return (v_ for v_ in vs if is_arrow(v, v_))
+
+
+def transitive_closure(vs, is_arrow):
+    """
+    Compute the transitive closure of a graph
+
+    :param vs: set of graph vertices
+    :param is_arrow: callable(v1, v2) that returns True if there is an edge
+                     linking v1 to v2
+    """
+    reachable = defaultdict(set)
+    for start_vertex in vs:
+        stack = [start_vertex]
+        while stack:
+            v = stack.pop()
+            reachable[start_vertex].add(v)
+            for v_ in child_vertices(vs, is_arrow, v):
+                if v_ not in reachable[start_vertex]:
+                    stack.append(v_)
+    return reachable
