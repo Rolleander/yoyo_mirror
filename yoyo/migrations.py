@@ -721,72 +721,64 @@ def heads(migration_list):
     return heads
 
 
-def topological_sort(
-    migration_list: Iterable[Migration],
-) -> Iterable[Migration]:
+def _gapotchenko_topological_sort(iterable, is_arrow, *, raise_on_cycle=False):
+    # iterable: an ordered iterable of vertices
+    # is_arrow: a callable(vertex1, vertex2) that is True, if there
+    #           is an arrow from vertex1 to vertex2
 
-    # Make a copy of migration_list. It's probably an iterator.
-    migration_list = list(migration_list)
+    vertices = list(iterable)
 
-    # Track graph edges in two parallel data structures.
-    # Use OrderedDict so that we can traverse edges in order
-    # and keep the sort stable
-    forward_edges = defaultdict(
-        OrderedDict
-    )  # type: Dict[Migration, Dict[Migration, int]]
-    backward_edges = defaultdict(
-        OrderedDict
-    )  # type: Dict[Migration, Dict[Migration, int]]
+    # compute the transitive closure (= reach-ability)
+    # using a recursive depth first search (DFS)
+    tc = defaultdict(set)
+    def dfs(s, v):
+         # Mark reachability from start to v as true.
+        s.add(id(v))
+        # Find all the vertices reachable through v
+        for vv in vertices:
+            if id(vv) not in s and is_arrow(v, vv):
+                dfs(s, vv)
+    for v in vertices:
+        dfs(tc[id(v)], v)
 
-    def sort_by_stability_order(
-        items, ordering={m: index for index, m in enumerate(migration_list)}
-    ):
-        return sorted(
-            (item for item in items if item in ordering), key=ordering.get
-        )
-
-    for m in migration_list:
-        for n in sort_by_stability_order(m.depends):
-            forward_edges[n][m] = 1
-            backward_edges[m][n] = 1
-
-    def check_cycles(item):
-        stack: List[Tuple[Migration, List[Migration]]] = [(item, [])]
-        while stack:
-            n, path = stack.pop()
-            if n in path:
-                raise exceptions.BadMigration(
-                    "Circular dependencies among these migrations {}".format(
-                        ", ".join(m.id for m in path + [n])
-                    )
+    # And now the algorithm given by Oleksiy Gapotchenko
+    # in http://blog.gapotchenko.com/stable-topological-sort
+    # This implementation is a bit optimised and can optionally
+    # raise on cycles
+    while True:
+        for i, vi in enumerate(vertices):
+            for j in range(i):
+                vj = vertices[j]
+                if is_arrow(vj, vi):
+                    if id(vj) not in tc[id(vi)]:
+                        # vj is not in the transitive closure of vi --> no cycle
+                        del vertices[i]
+                        vertices.insert(j, vi)
+                        break # restart
+                    # it is a cycle
+                    if raise_on_cycle:
+                        # raise ValueError("graph contains a cycle", vi)
+                        raise exceptions.BadMigration(
+                            "Circular dependencies among these migrations {}".format(
+                                ", ".join(m.id for m in vertices if id(m) in tc[id(vi)])
+                            )
                 )
-            stack.extend((f, path + [n]) for f in forward_edges[n])
-
-    seen = set()
-    for item in migration_list:
-
-        if item in seen:
-            continue
-
-        check_cycles(item)
-
-        # if item is in a dedepency graph, go back to the root node
-        while backward_edges[item]:
-            item = next(iter(backward_edges[item]))
-
-        # is item at the start of a dependency graph?
-        if forward_edges[item]:
-            stack = [item]
-            while stack:
-                m = stack.pop()
-                yield m
-                seen.add(m)
-                for child in list(reversed(list(forward_edges[m]))):
-                    if all(
-                        dependency in seen
-                        for dependency in backward_edges[child]
-                    ):
-                        stack.append(child)
+            else:
+                if raise_on_cycle and is_arrow(vi, vi):
+                    # a degenerate cycle
+                    raise exceptions.BadMigration(
+                        "Circular dependencies among these migrations {}".format(vi.id)
+                    )
+                continue
+            break
         else:
-            yield item
-            seen.add(item)
+            return vertices
+
+
+def topological_sort(migration_list: Iterable[Migration]) -> Iterable[Migration]:
+
+    # Make a copy of migration_list and do an initial sort by id
+    migration_list = list(sorted(list(migration_list), key=lambda m: m.id))
+    return _gapotchenko_topological_sort(migration_list,
+                                         lambda x,y: y in x.depends,
+                                         raise_on_cycle=True)
