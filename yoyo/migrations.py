@@ -486,6 +486,8 @@ def _expand_sources(sources) -> Iterable[Tuple[str, List[str]]]:
 def read_migrations(*sources):
     """
     Return a ``MigrationList`` containing all migrations from ``sources``.
+
+    Migrations are returned sorted by source (in the given order), then by id.
     """
     migrations = OrderedDict()  # type: Dict[str, MigrationList]
 
