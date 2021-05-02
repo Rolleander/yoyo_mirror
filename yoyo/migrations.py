@@ -477,10 +477,10 @@ def _expand_sources(sources) -> Iterable[Tuple[str, List[str]]]:
             for directory in glob(source):
                 paths = [
                     os.path.join(directory, path)
-                    for path in sorted(os.listdir(directory))
+                    for path in os.listdir(directory)
                     if _is_migration_file(path)
                 ]
-                yield (directory, paths)
+                yield (directory, sorted(paths))
 
 
 def read_migrations(*sources):
