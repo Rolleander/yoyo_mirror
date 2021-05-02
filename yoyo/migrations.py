@@ -722,9 +722,9 @@ def heads(migration_list):
 
 
 def topological_sort(migration_list: Iterable[Migration]) -> Iterable[Migration]:
-
-    # Make a copy of migration_list and do an initial sort by id
-    migration_list = list(sorted(list(migration_list), key=lambda m: m.id))
-    return topologicalsort.gapotchenko_topological_sort(
-        migration_list, lambda x, y: y in x.depends, raise_on_cycle=True
-    )
+    try:
+        return topologicalsort.gapotchenko_topological_sort(
+            migration_list, lambda x, y: y in x.depends, raise_on_cycle=True
+        )
+    except ValueError as e:
+        raise exceptions.BadMigration from e
