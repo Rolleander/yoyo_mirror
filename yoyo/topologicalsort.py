@@ -3,8 +3,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
-from yoyo import exceptions
-
 
 def gapotchenko_topological_sort(
     iterable: Iterable[Any],
@@ -51,17 +49,16 @@ def gapotchenko_topological_sort(
                         break  # restart
                     # it is a cycle
                     if raise_on_cycle:
-                        # raise ValueError("graph contains a cycle", vi)
-                        raise exceptions.BadMigration(
-                            "Circular dependencies among these migrations {}".format(
+                        raise ValueError(
+                            "Circular dependencies between {}".format(
                                 ", ".join(m.id for m in vertices if id(m) in tc[id(vi)])
                             )
                         )
             else:
                 if raise_on_cycle and is_arrow(vi, vi):
                     # a degenerate cycle
-                    raise exceptions.BadMigration(
-                        "Circular dependencies among these migrations {}".format(vi.id)
+                    raise ValueError(
+                        "Circular dependencies between {}".format(vi.id)
                     )
                 continue
             break
