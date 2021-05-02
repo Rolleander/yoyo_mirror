@@ -270,9 +270,14 @@ def test_grouped_migrations_can_be_rolled_back(backend):
 
 
 class TestTopologicalSort(object):
+
     def check(self, nodes, edges, expected_order):
         migrations = self.get_mock_migrations(nodes, edges)
-        output_order = "".join(m.id for m in topological_sort(migrations))
+        output = [m.id for m in topological_sort(migrations)]
+        if isinstance(expected_order, str):
+            output_order = "".join(output)
+        else:
+            output_order = output
         assert output_order == expected_order
 
     def get_mock_migrations(self, nodes="ABCD", edges=[]):
@@ -340,6 +345,14 @@ class TestTopologicalSort(object):
         #      C --- +
         for input_order in itertools.permutations("ABC"):
             self.check(input_order, {"AB", "AC", "CB"}, "ACB")
+
+    def test_it_doesnt_modify_order_unnecessarily(self):
+        """
+        Test for issue raised in
+
+        https://lists.sr.ht/~olly/yoyo/%3C09c43045fdf14024a0f2e905408ea41f%40atos.net%3E
+        """
+        self.check(["m1", "m2", "m3"], {("m1", "m3")}, ["m1", "m2", "m3"])
 
 
 class TestMigrationList(object):
