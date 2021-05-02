@@ -743,13 +743,15 @@ def _gapotchenko_topological_sort(
     # compute the transitive closure (= reach-ability)
     # using a recursive depth first search (DFS)
     tc = defaultdict(set)
+
     def dfs(s, v):
-         # Mark reachability from start to v as true.
+        # Mark reachability from start to v as true.
         s.add(id(v))
         # Find all the vertices reachable through v
         for vv in vertices:
             if id(vv) not in s and is_arrow(v, vv):
                 dfs(s, vv)
+
     for v in vertices:
         dfs(tc[id(v)], v)
 
@@ -763,7 +765,7 @@ def _gapotchenko_topological_sort(
                         # vj is not in the transitive closure of vi --> no cycle
                         del vertices[i]
                         vertices.insert(j, vi)
-                        break # restart
+                        break  # restart
                     # it is a cycle
                     if raise_on_cycle:
                         # raise ValueError("graph contains a cycle", vi)
@@ -771,7 +773,7 @@ def _gapotchenko_topological_sort(
                             "Circular dependencies among these migrations {}".format(
                                 ", ".join(m.id for m in vertices if id(m) in tc[id(vi)])
                             )
-                )
+                        )
             else:
                 if raise_on_cycle and is_arrow(vi, vi):
                     # a degenerate cycle
@@ -788,6 +790,6 @@ def topological_sort(migration_list: Iterable[Migration]) -> Iterable[Migration]
 
     # Make a copy of migration_list and do an initial sort by id
     migration_list = list(sorted(list(migration_list), key=lambda m: m.id))
-    return _gapotchenko_topological_sort(migration_list,
-                                         lambda x,y: y in x.depends,
-                                         raise_on_cycle=True)
+    return _gapotchenko_topological_sort(
+        migration_list, lambda x, y: y in x.depends, raise_on_cycle=True
+    )
