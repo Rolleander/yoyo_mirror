@@ -729,10 +729,15 @@ def _gapotchenko_topological_sort(
     *,
     raise_on_cycle: bool = False
 ):
-    # iterable: an ordered iterable of vertices
-    # is_arrow: a callable(vertex1, vertex2) that is True, if there
-    #           is an arrow from vertex1 to vertex2
+    """
+    Implement the Gapotchenko stable topological sort algorithm
+    (http://blog.gapotchenko.com/stable-topological-sort).
+    The algorithm has been optimised and can optionally raise on cycles
 
+    :param iterable: an ordered iterable of vertices
+    :param is_arrow: a callable(v1, v2) that returns True if there is an arrow
+                     from v1 to v2
+    """
     vertices = list(iterable)
 
     # compute the transitive closure (= reach-ability)
@@ -749,9 +754,6 @@ def _gapotchenko_topological_sort(
         dfs(tc[id(v)], v)
 
     # And now the algorithm given by Oleksiy Gapotchenko
-    # in http://blog.gapotchenko.com/stable-topological-sort
-    # This implementation is a bit optimised and can optionally
-    # raise on cycles
     while True:
         for i, vi in enumerate(vertices):
             for j in range(i):
