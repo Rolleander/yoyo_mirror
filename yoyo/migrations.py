@@ -48,9 +48,7 @@ default_migration_table = "_yoyo_migration"
 
 hash_function = hashlib.sha256
 
-_collectors: MutableMapping[str, "StepCollector"] = (
-    weakref.WeakValueDictionary()
-)
+_collectors: MutableMapping[str, "StepCollector"] = (weakref.WeakValueDictionary())
 
 
 def _is_migration_file(path):
@@ -92,9 +90,7 @@ def parse_metadata_from_sql_comments(
     directive_names = ["transactional", "depends"]
     comment_or_empty = re.compile(r"^(\s*|\s*--.*)$").match
     directive_pattern = re.compile(
-        r"^\s*--\s*({})\s*:\s*(.*)$".format(
-            "|".join(map(re.escape, directive_names))
-        )
+        r"^\s*--\s*({})\s*:\s*(.*)$".format("|".join(map(re.escape, directive_names)))
     )
 
     lineending = re.search(r"\n|\r\n|\r", s + "\n").group(0)  # type: ignore
@@ -134,11 +130,9 @@ def read_sql_migration(
         with open(path, "r", encoding="UTF-8") as f:
             statements = sqlparse.split(f.read())
             if statements:
-                (
-                    directives,
-                    leading_comment,
-                    sql,
-                ) = parse_metadata_from_sql_comments(statements[0])
+                (directives, leading_comment, sql,) = parse_metadata_from_sql_comments(
+                    statements[0]
+                )
                 statements[0] = sql
     statements = [s for s in statements if s.strip()]
     return directives, leading_comment, statements
@@ -161,9 +155,7 @@ class Migration(object):
         self.module = None
 
     def __repr__(self):
-        return "<{} {!r} from {}>".format(
-            self.__class__.__name__, self.id, self.path
-        )
+        return "<{} {!r} from {}>".format(self.__class__.__name__, self.id, self.path)
 
     def is_raw_sql(self):
         return self.path.endswith(".sql")
@@ -197,9 +189,7 @@ class Migration(object):
         self.module.transaction = collector.add_step_group  # type: ignore
         self.module.collector = collector  # type: ignore
         if self.is_raw_sql():
-            directives, leading_comment, statements = read_sql_migration(
-                self.path
-            )
+            directives, leading_comment, statements = read_sql_migration(self.path)
             _, _, rollback_statements = read_sql_migration(
                 os.path.splitext(self.path)[0] + ".rollback.sql"
             )
@@ -221,7 +211,7 @@ class Migration(object):
             setattr(
                 self.module,
                 "__depends__",
-                {d for d in directives.get("depends", "").split() if d}
+                {d for d in directives.get("depends", "").split() if d},
             )
 
         else:
@@ -237,9 +227,7 @@ class Migration(object):
                 spec.loader.exec_module(self.module)  # type: ignore
 
             except Exception as e:
-                logger.exception(
-                    "Could not import migration from %r: %r", self.path, e
-                )
+                logger.exception("Could not import migration from %r: %r", self.path, e)
                 raise exceptions.BadMigration(self.path, e)
         depends = getattr(self.module, "__depends__", [])
         if isinstance(depends, (str, bytes)):
@@ -276,10 +264,7 @@ class Migration(object):
                 except backend.DatabaseError:
                     exc_info = sys.exc_info()
 
-                    if (
-                        not backend.has_transactional_ddl
-                        or not self.use_transactions
-                    ):
+                    if not backend.has_transactional_ddl or not self.use_transactions:
                         # Any DDL statements that have been executed have been
                         # committed. Go through the rollback steps to undo
                         # these inasmuch is possible.
@@ -287,9 +272,7 @@ class Migration(object):
                             for step in reversed(executed_steps):
                                 getattr(step, reverse)(backend)
                         except backend.DatabaseError:
-                            logger.exception(
-                                "Could not %s step %s", direction, step.id
-                            )
+                            logger.exception("Could not %s step %s", direction, step.id)
                     if exc_info[1] is not None:
                         raise exc_info[1].with_traceback(exc_info[2])
 
@@ -402,9 +385,7 @@ class MigrationStep(StepBase):
             logger.debug(" - executing %r", stmt)
         cursor.execute(stmt)
         if cursor.description:
-            result = [
-                [str(value) for value in row] for row in cursor.fetchall()
-            ]
+            result = [[str(value) for value in row] for row in cursor.fetchall()]
             column_names = [desc[0] for desc in cursor.description]
             column_sizes = [len(c) for c in column_names]
 
@@ -415,9 +396,7 @@ class MigrationStep(StepBase):
             format = "|".join(" %%- %ds " % size for size in column_sizes)
             format += "\n"
             out.write(format % tuple(column_names))
-            out.write(
-                "+".join("-" * (size + 2) for size in column_sizes) + "\n"
-            )
+            out.write("+".join("-" * (size + 2) for size in column_sizes) + "\n")
             for row in result:
                 out.write(format % tuple(row))
             out.write(plural(len(result), "(%d row)", "(%d rows)") + "\n")
@@ -521,9 +500,7 @@ def read_migrations(*sources):
                 migration_class = PostApplyHookMigration
 
             migration = migration_class(
-                os.path.splitext(os.path.basename(path))[0],
-                path,
-                source_dir=source,
+                os.path.splitext(os.path.basename(path))[0], path, source_dir=source,
             )
             ml = migrations.setdefault(source, MigrationList())
             if migration_class is PostApplyHookMigration:
@@ -599,9 +576,7 @@ class MigrationList(abc.MutableSequence):
         return ob
 
     def filter(self, predicate):
-        return self.__class__(
-            [m for m in self if predicate(m)], self.post_apply
-        )
+        return self.__class__([m for m in self if predicate(m)], self.post_apply)
 
     def replace(self, newmigrations):
         return self.__class__(newmigrations, self.post_apply)
@@ -628,12 +603,8 @@ class StepCollector(object):
         """
 
         def do_add(use_transactions):
-            wrapper = (
-                TransactionWrapper if use_transactions else Transactionless
-            )
-            t = MigrationStep(
-                next(self.step_id), apply, rollback
-            )  # type: StepBase
+            wrapper = TransactionWrapper if use_transactions else Transactionless
+            t = MigrationStep(next(self.step_id), apply, rollback)  # type: StepBase
             t = wrapper(t, ignore_errors)
             return t
 
@@ -654,22 +625,16 @@ class StepCollector(object):
             steps = kwargs["steps"]
         else:
             steps = list(
-                chain(
-                    *(s if isinstance(s, abc.Iterable) else [s] for s in args)
-                )
+                chain(*(s if isinstance(s, abc.Iterable) else [s] for s in args))
             )
         for s in steps:
             del self.steps[s]
 
         def do_add(use_transactions):
             ignore_errors = kwargs.pop("ignore_errors", None)
-            wrapper = (
-                TransactionWrapper if use_transactions else Transactionless
-            )
+            wrapper = TransactionWrapper if use_transactions else Transactionless
 
-            group = StepGroup(
-                [create_step(use_transactions) for create_step in steps]
-            )
+            group = StepGroup([create_step(use_transactions) for create_step in steps])
             return wrapper(group, ignore_errors)
 
         self.steps[do_add] = 1
