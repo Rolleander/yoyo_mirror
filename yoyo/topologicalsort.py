@@ -27,14 +27,14 @@ def gapotchenko_topological_sort(
 
     def dfs(s, v):
         # Mark reachability from start to v as true.
-        s.add(id(v))
+        s.add(v)
         # Find all the vertices reachable through v
         for vv in vertices:
-            if id(vv) not in s and is_arrow(v, vv):
+            if vv not in s and is_arrow(v, vv):
                 dfs(s, vv)
 
     for v in vertices:
-        dfs(tc[id(v)], v)
+        dfs(tc[v], v)
 
     # And now the algorithm given by Oleksiy Gapotchenko
     while True:
@@ -42,7 +42,7 @@ def gapotchenko_topological_sort(
             for j in range(i):
                 vj = vertices[j]
                 if is_arrow(vj, vi):
-                    if id(vj) not in tc[id(vi)]:
+                    if vj not in tc[vi]:
                         # vj is not in the transitive closure of vi --> no cycle
                         del vertices[i]
                         vertices.insert(j, vi)
@@ -51,7 +51,7 @@ def gapotchenko_topological_sort(
                     if raise_on_cycle:
                         raise ValueError(
                             "Circular dependencies between {}".format(
-                                ", ".join(m.id for m in vertices if id(m) in tc[id(vi)])
+                                ", ".join(m.id for m in vertices if m in tc[vi])
                             )
                         )
             else:
