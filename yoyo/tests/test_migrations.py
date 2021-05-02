@@ -308,7 +308,7 @@ class TestTopologicalSort(object):
         self.check("CBAD", {"AB"}, "CABD")
 
         # Extended group
-        self.check("ABCD", {"AB", "AD"}, "ABDC")
+        self.check("ABCD", {"AB", "AD"}, "ABCD")
         self.check("DBCA", {"AB", "AD"}, "ADBC")
 
         # Non-connected groups
