@@ -725,7 +725,8 @@ def topological_sort(migrations: Iterable[Migration]) -> Iterable[Migration]:
     from yoyo.topologicalsort import CycleError
 
     migration_list = list(migrations)
-    dependency_graph = {m: m.depends for m in migration_list}
+    all_migrations = set(migration_list)
+    dependency_graph = {m: (m.depends & all_migrations) for m in migration_list}
     try:
         return topological_sort_impl(migration_list, dependency_graph)
     except CycleError as e:
