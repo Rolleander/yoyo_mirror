@@ -35,12 +35,7 @@ def topological_sort(
     blocked_on: Dict[T, Set[T]] = defaultdict(set)
     while pqueue:
         if seen_since_last_change == len(pqueue):
-            for item in blocked_on:
-                if item not in ordering:
-                    raise ValueError(
-                        f"Dependency graph contains a non-existent node {item!r}"
-                    )
-            raise CycleError("Dependency graph loop detected", [n for _, n in pqueue])
+            raise_cycle_error(ordering, pqueue, blocked_on)
 
         _, n = heappop(pqueue)
 
@@ -60,3 +55,19 @@ def topological_sort(
             seen_since_last_change = 0
         else:
             seen_since_last_change += 1
+
+    if blocked_on:
+        raise_cycle_error(ordering, pqueue, blocked_on)
+
+
+def raise_cycle_error(ordering, pqueue, blocked_on):
+    bad = next((item for item in blocked_on if item not in ordering), None)
+    if bad:
+        raise ValueError(f"Dependency graph contains a non-existent node {bad!r}")
+    unresolved = {n for _, n in pqueue}
+    unresolved.update(*blocked_on.values())
+    if unresolved:
+        raise CycleError(
+            f"Dependency graph loop detected among {unresolved!r}",
+            list(sorted(unresolved, key=ordering.get)),
+        )
