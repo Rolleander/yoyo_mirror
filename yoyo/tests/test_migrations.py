@@ -278,6 +278,8 @@ class TestTopologicalSort(object):
             output_order = "".join(output)
         else:
             output_order = output
+        for x, y in edges:
+            assert output.index(x) < output.index(y)
         assert output_order == expected_order
 
     def get_mock_migrations(self, nodes="ABCD", edges=[]):
