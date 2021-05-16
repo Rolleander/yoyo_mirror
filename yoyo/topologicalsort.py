@@ -33,29 +33,32 @@ def topological_sort(
 
     # Map blockers to the list of items they block
     blocked_on: Dict[T, Set[T]] = defaultdict(set)
+    blocked: Set[T] = set()
+
     while pqueue:
-        if seen_since_last_change == len(pqueue):
+        if seen_since_last_change == len(pqueue) + len(blocked):
             raise_cycle_error(ordering, pqueue, blocked_on)
 
         _, n = heappop(pqueue)
 
-        if all(d in output for d in dependency_graph.get(n, [])):
-            changed = True
-            output.add(n)
-            yield n
-            for blocked in blocked_on.pop(n, []):
-                heappush(pqueue, (ordering[blocked], blocked))
-        else:
-            changed = False
-            for d in dependency_graph.get(n, []):
-                if n not in blocked_on[d]:
-                    blocked_on[d].add(n)
-                    changed = True
-        if changed:
+        blockers = {d for d in dependency_graph.get(n, []) if d not in output}
+        if not blockers:
             seen_since_last_change = 0
+            output.add(n)
+            if n in blocked:
+                blocked.remove(n)
+            yield n
+            for b in blocked_on.pop(n, []):
+                if not any(b in other for other in blocked_on.values()):
+                    heappush(pqueue, (ordering[b], b))
         else:
-            seen_since_last_change += 1
-
+            if n in blocked:
+                seen_since_last_change += 1
+            else:
+                seen_since_last_change = 0
+                blocked.add(n)
+                for b in blockers:
+                    blocked_on[b].add(n)
     if blocked_on:
         raise_cycle_error(ordering, pqueue, blocked_on)
 
