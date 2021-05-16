@@ -41,7 +41,9 @@ def topological_sort(
 
         _, n = heappop(pqueue)
 
-        blockers = {d for d in dependency_graph.get(n, []) if d not in output}
+        blockers = {
+            d for d in dependency_graph.get(n, []) if d not in output and d in ordering
+        }
         if not blockers:
             seen_since_last_change = 0
             output.add(n)
