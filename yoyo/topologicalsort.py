@@ -74,3 +74,4 @@ def raise_cycle_error(ordering, pqueue, blocked_on):
             f"Dependency graph loop detected among {unresolved!r}",
             list(sorted(unresolved, key=ordering.get)),
         )
+    raise AssertionError("raise_cycle_error called but no unresovled nodes exist")
