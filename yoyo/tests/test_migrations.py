@@ -16,7 +16,6 @@ from datetime import datetime
 from datetime import timedelta
 from mock import Mock, patch
 import io
-import itertools
 import os
 
 import pytest
@@ -28,7 +27,7 @@ from yoyo import ancestors, descendants
 
 from yoyo.tests import migrations_dir
 from yoyo.tests import tempdir
-from yoyo.migrations import topological_sort, MigrationList
+from yoyo.migrations import MigrationList
 from yoyo.scripts import newmigration
 
 
@@ -267,94 +266,6 @@ def test_grouped_migrations_can_be_rolled_back(backend):
             assert cursor.fetchone() == (0,)
             backend.rollback()
         backend.rollback_migrations(read_migrations(t1))
-
-
-class TestTopologicalSort(object):
-
-    def check(self, nodes, edges, expected_order):
-        migrations = self.get_mock_migrations(nodes, edges)
-        output = [m.id for m in topological_sort(migrations)]
-        if isinstance(expected_order, str):
-            output_order = "".join(output)
-        else:
-            output_order = output
-        for x, y in edges:
-            assert output.index(x) < output.index(y)
-        assert output_order == expected_order
-
-    def get_mock_migrations(self, nodes="ABCD", edges=[]):
-        class MockMigration(Mock):
-            def __repr__(self):
-                return "<MockMigration {}>".format(self.id)
-
-        migrations = {n: MockMigration(id=n, depends=set()) for n in nodes}
-        for g in edges:
-            for edge in zip(g, g[1:]):
-                migrations[edge[1]].depends.add(migrations[edge[0]])
-
-        return [migrations[n] for n in nodes]
-
-    def test_it_keeps_stable_order(self):
-
-        for s in itertools.permutations("ABCD"):
-            self.check(s, {}, "".join(s))
-
-    def test_it_sorts_topologically(self):
-
-        # Single group at start
-        self.check("ABCD", {"AB"}, "ABCD")
-        self.check("BACD", {"AB"}, "ABCD")
-
-        # Single group in middle start
-        self.check("CABD", {"AB"}, "CABD")
-        self.check("CBAD", {"AB"}, "CABD")
-
-        # Extended group
-        self.check("ABCD", {"AB", "AD"}, "ABDC")
-        self.check("DBCA", {"AB", "AD"}, "ADBC")
-
-        # Non-connected groups
-        self.check("ABCDEF", {"CB", "ED"}, "ACBEDF")
-        self.check("ADEBCF", {"CB", "ED"}, "AEDCBF")
-        self.check("ADEFBC", {"CB", "ED"}, "AEDFCB")
-        self.check("DBAFEC", {"CB", "ED"}, "EDCBAF")
-
-    def test_it_discards_missing_dependencies(self):
-        A, B, C, D = self.get_mock_migrations()
-        C.depends.add(Mock())
-        assert list(topological_sort([A, B, C, D])) == [A, B, C, D]
-
-    def test_it_catches_cycles(self):
-        A, B, C, D = self.get_mock_migrations()
-        C.depends.add(C)
-        with pytest.raises(exceptions.BadMigration):
-            self.check("ABCD", {"AA"}, "")
-        with pytest.raises(exceptions.BadMigration):
-            self.check("ABCD", {"AB", "BA"}, "")
-        with pytest.raises(exceptions.BadMigration):
-            self.check("ABCD", {"AB", "BC", "CB"}, "")
-        with pytest.raises(exceptions.BadMigration):
-            self.check("ABCD", {"AB", "BC", "CA"}, "")
-
-    def test_it_handles_multiple_edges_to_the_same_node(self):
-        self.check("ABCD", {"AB", "AC", "AD"}, "ABCD")
-        self.check("DCBA", {"AB", "AC", "AD"}, "ADCB")
-
-    def test_it_handles_multiple_edges_to_the_same_node2(self):
-        #      A --> B
-        #      |     ^
-        #      v     |
-        #      C --- +
-        for input_order in itertools.permutations("ABC"):
-            self.check(input_order, {"AB", "AC", "CB"}, "ACB")
-
-    def test_it_doesnt_modify_order_unnecessarily(self):
-        """
-        Test for issue raised in
-
-        https://lists.sr.ht/~olly/yoyo/%3C09c43045fdf14024a0f2e905408ea41f%40atos.net%3E
-        """
-        self.check(["m1", "m2", "m3"], {("m1", "m3")}, ["m1", "m2", "m3"])
 
 
 class TestMigrationList(object):
