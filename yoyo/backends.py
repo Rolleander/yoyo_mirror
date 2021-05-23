@@ -137,9 +137,7 @@ class DatabaseBackend(object):
         "{0.migration_table_quoted} "
         "ORDER by applied_at_utc"
     )
-    create_test_table_sql = (
-        "CREATE TABLE {table_name_quoted} " "(id INT PRIMARY KEY)"
-    )
+    create_test_table_sql = "CREATE TABLE {table_name_quoted} " "(id INT PRIMARY KEY)"
     log_migration_sql = (
         "INSERT INTO {0.log_table_quoted} "
         "(id, migration_hash, migration_id, operation, "
@@ -168,14 +166,15 @@ class DatabaseBackend(object):
         self.init_connection(self._connection)
         self.migration_table = migration_table
         self.has_transactional_ddl = self._transactional_ddl_cache.get(
-            pickle.dumps(self.uri),
-            True
+            pickle.dumps(self.uri), True
         )
 
     def init_database(self):
         self.create_lock_table()
         self.has_transactional_ddl = self._check_transactional_ddl()
-        self._transactional_ddl_cache[pickle.dumps(self.uri)] = self.has_transactional_ddl
+        self._transactional_ddl_cache[
+            pickle.dumps(self.uri)
+        ] = self.has_transactional_ddl
 
     def _load_driver_module(self):
         """
@@ -234,9 +233,7 @@ class DatabaseBackend(object):
         """
         table_name = "yoyo_tmp_{}".format(utils.get_random_string(10))
         table_name_quoted = self.quote_identifier(table_name)
-        sql = self.create_test_table_sql.format(
-            table_name_quoted=table_name_quoted
-        )
+        sql = self.create_test_table_sql.format(table_name_quoted=table_name_quoted)
         with self.transaction() as t:
             self.execute(sql)
             t.rollback()
@@ -340,9 +337,7 @@ class DatabaseBackend(object):
                 with self.transaction():
                     self.execute(
                         "INSERT INTO {} (locked, ctime, pid) "
-                        "VALUES (1, :when, :pid)".format(
-                            self.lock_table_quoted
-                        ),
+                        "VALUES (1, :when, :pid)".format(self.lock_table_quoted),
                         {"when": datetime.utcnow(), "pid": pid},
                     )
             except self.DatabaseError:
@@ -354,9 +349,7 @@ class DatabaseBackend(object):
                     if row:
                         raise exceptions.LockTimeout(
                             "Process {} has locked this database "
-                            "(run yoyo break-lock to remove this lock)".format(
-                                row[0]
-                            )
+                            "(run yoyo break-lock to remove this lock)".format(row[0])
                         )
                     else:
                         raise exceptions.LockTimeout(
@@ -391,9 +384,7 @@ class DatabaseBackend(object):
             raise TypeError("Expected dict or other mapping object")
 
         cursor = self.cursor()
-        sql, params = utils.change_param_style(
-            self.driver.paramstyle, sql, params
-        )
+        sql, params = utils.change_param_style(self.driver.paramstyle, sql, params)
         cursor.execute(sql, params)
         return cursor
 
@@ -685,7 +676,7 @@ class SQLiteBackend(DatabaseBackend):
         conn = self.driver.connect(
             f"file:{dburi.database}?cache=shared",
             uri=True,
-            detect_types=self.driver.PARSE_DECLTYPES
+            detect_types=self.driver.PARSE_DECLTYPES,
         )
         conn.isolation_level = None
         return conn
@@ -762,18 +753,14 @@ class RedshiftBackend(PostgresqlBackend):
                 if not row:
                     self.execute(
                         "INSERT INTO {} (locked, ctime, pid) "
-                        "VALUES (1, :when, :pid)".format(
-                            self.lock_table_quoted
-                        ),
+                        "VALUES (1, :when, :pid)".format(self.lock_table_quoted),
                         {"when": datetime.utcnow(), "pid": pid},
                     )
                     return
                 elif timeout and time.time() > started + timeout:
                     raise exceptions.LockTimeout(
                         "Process {} has locked this database "
-                        "(run yoyo break-lock to remove this lock)".format(
-                            row[0]
-                        )
+                        "(run yoyo break-lock to remove this lock)".format(row[0])
                     )
                 else:
                     time.sleep(poll_interval)

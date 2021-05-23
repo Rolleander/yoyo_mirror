@@ -537,7 +537,9 @@ class TestReadMigrations(object):
         with pytest.raises(exceptions.BadMigration):
             check("-- depends: true\nSELECT 1", set())
 
-    def test_it_does_not_mix_up_migrations_from_different_sources(self, backend_sqlite3):
+    def test_it_does_not_mix_up_migrations_from_different_sources(
+        self, backend_sqlite3
+    ):
         with migrations_dir(**{"1.sql": "", "3.sql": ""}) as t1, migrations_dir(
             **{"2.sql": "", "4.sql": ""}
         ) as t2:
