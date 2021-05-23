@@ -460,6 +460,20 @@ class TestReadMigrations(object):
         assert len(migrations) == 1
         assert migrations[0].id == "test-pkg-migration"
 
+    def test_it_reads_relative_path(self):
+        """
+        https://todo.sr.ht/~olly/yoyo/79
+        """
+        with migrations_dir(a="from yoyo import step; step('SELECT 1')") as tmpdir:
+            saved_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                m = read_migrations(".")[0]
+                m.load()
+                assert len(m.steps) == 1
+            finally:
+                os.chdir(saved_cwd)
+
     def test_it_globs_directory_names(self):
         def touch(f):
             io.open(f, "w").close()
