@@ -346,9 +346,7 @@ class TestReadMigrations(object):
         The yoyo new command creates temporary files in the migrations directory.
         These shouldn't be picked up by yoyo apply etc
         """
-        with migrations_dir(
-            **{newmigration.tempfile_prefix + "test": ""}
-        ) as tmpdir:
+        with migrations_dir(**{newmigration.tempfile_prefix + "test": ""}) as tmpdir:
             assert len(read_migrations(tmpdir)) == 0
 
     def test_it_loads_post_apply_scripts(self):
@@ -367,12 +365,8 @@ class TestReadMigrations(object):
             m.load()
             assert len(m.steps) == 1
 
-    def test_it_does_not_add_duplicate_steps_with_imported_symbols(
-        self, tmpdir
-    ):
-        with migrations_dir(
-            a="from yoyo import step; step('SELECT 1')"
-        ) as tmpdir:
+    def test_it_does_not_add_duplicate_steps_with_imported_symbols(self, tmpdir):
+        with migrations_dir(a="from yoyo import step; step('SELECT 1')") as tmpdir:
             m = read_migrations(tmpdir)[0]
             m.load()
             assert len(m.steps) == 1
@@ -447,9 +441,7 @@ class TestReadMigrations(object):
 
     def test_it_sets_depends_for_sql_migrations(self):
         def check(sql, expected):
-            with migrations_dir(
-                **{"1.sql": "", "2.sql": "", "3.sql": sql}
-            ) as tmp:
+            with migrations_dir(**{"1.sql": "", "2.sql": "", "3.sql": sql}) as tmp:
 
                 migration = read_migrations(tmp)[-1]
                 migration.load()
@@ -463,7 +455,9 @@ class TestReadMigrations(object):
         with pytest.raises(exceptions.BadMigration):
             check("-- depends: true\nSELECT 1", set())
 
-    def test_it_does_not_mix_up_migrations_from_different_sources(self, backend_sqlite3):
+    def test_it_does_not_mix_up_migrations_from_different_sources(
+        self, backend_sqlite3
+    ):
         with migrations_dir(**{"1.sql": "", "3.sql": ""}) as t1, migrations_dir(
             **{"2.sql": "", "4.sql": ""}
         ) as t2:
@@ -548,27 +542,20 @@ class TestLogging(object):
             "from _yoyo_log "
             "ORDER BY id DESC LIMIT 1"
         )
-        return {
-            d[0]: value
-            for d, value in zip(cursor.description, cursor.fetchone())
-        }
+        return {d[0]: value for d, value in zip(cursor.description, cursor.fetchone())}
 
     def get_log_count(self, backend):
         return backend.execute("SELECT count(1) FROM _yoyo_log").fetchone()[0]
 
     def test_it_logs_apply_and_rollback(self, backend):
-        with migrations_dir(
-            a='step("CREATE TABLE yoyo_test (id INT)")'
-        ) as tmpdir:
+        with migrations_dir(a='step("CREATE TABLE yoyo_test (id INT)")') as tmpdir:
             migrations = read_migrations(tmpdir)
             backend.apply_migrations(migrations)
             assert self.get_log_count(backend) == 1
             logged = self.get_last_log_entry(backend)
             assert logged["migration_id"] == "a"
             assert logged["operation"] == "apply"
-            assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(
-                seconds=3
-            )
+            assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(seconds=3)
             apply_time = logged["created_at_utc"]
 
             backend.rollback_migrations(migrations)
@@ -579,18 +566,14 @@ class TestLogging(object):
             assert logged["created_at_utc"] >= apply_time
 
     def test_it_logs_mark_and_unmark(self, backend):
-        with migrations_dir(
-            a='step("CREATE TABLE yoyo_test (id INT)")'
-        ) as tmpdir:
+        with migrations_dir(a='step("CREATE TABLE yoyo_test (id INT)")') as tmpdir:
             migrations = read_migrations(tmpdir)
             backend.mark_migrations(migrations)
             assert self.get_log_count(backend) == 1
             logged = self.get_last_log_entry(backend)
             assert logged["migration_id"] == "a"
             assert logged["operation"] == "mark"
-            assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(
-                seconds=3
-            )
+            assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(seconds=3)
             marked_time = logged["created_at_utc"]
 
             backend.unmark_migrations(migrations)
