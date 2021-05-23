@@ -1,5 +1,5 @@
-7.3.2
------
+7.3.2 (released 2021-05-23)
+---------------------------
 
 * Bugfix: fix errors arising when migration code changes connection parameters,
   for example the schema search path in PostgreSQL. Yoyo now uses a separate
