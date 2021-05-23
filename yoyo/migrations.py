@@ -650,7 +650,7 @@ def _get_collector(depth=2):
         if path in _collectors:
             return _collectors[path]
     raise AssertionError(
-        "Excected to be called in the context of a migration module import"
+        "Expected to be called in the context of a migration module import"
     )
 
 
