@@ -6,6 +6,11 @@
   database connection for running migrations than for updating its internal
   metadata tables.
 
+* Bugfix: fix error when loading Python module based migrations, caused by
+  changes to importlib in Python 3.8.10 and Python 3.9.5.
+
+* Add support for arbitrary connection parameters to snowflake backend
+
 7.3.1 (released 2021-01-18)
 ---------------------------
 
