@@ -16,7 +16,6 @@ from datetime import datetime
 from datetime import timedelta
 from mock import Mock, patch
 import io
-import itertools
 import os
 
 import pytest
@@ -28,7 +27,7 @@ from yoyo import ancestors, descendants
 
 from yoyo.tests import migrations_dir
 from yoyo.tests import tempdir
-from yoyo.migrations import topological_sort, MigrationList
+from yoyo.migrations import MigrationList
 from yoyo.scripts import newmigration
 
 
@@ -269,79 +268,6 @@ def test_grouped_migrations_can_be_rolled_back(backend):
         backend.rollback_migrations(read_migrations(t1))
 
 
-class TestTopologicalSort(object):
-    def check(self, nodes, edges, expected_order):
-        migrations = self.get_mock_migrations(nodes, edges)
-        output_order = "".join(m.id for m in topological_sort(migrations))
-        assert output_order == expected_order
-
-    def get_mock_migrations(self, nodes="ABCD", edges=[]):
-        class MockMigration(Mock):
-            def __repr__(self):
-                return "<MockMigration {}>".format(self.id)
-
-        migrations = {n: MockMigration(id=n, depends=set()) for n in nodes}
-        for g in edges:
-            for edge in zip(g, g[1:]):
-                migrations[edge[1]].depends.add(migrations[edge[0]])
-
-        return [migrations[n] for n in nodes]
-
-    def test_it_keeps_stable_order(self):
-
-        for s in itertools.permutations("ABCD"):
-            self.check(s, {}, "".join(s))
-
-    def test_it_sorts_topologically(self):
-
-        # Single group at start
-        self.check("ABCD", {"AB"}, "ABCD")
-        self.check("BACD", {"AB"}, "ABCD")
-
-        # Single group in middle start
-        self.check("CABD", {"AB"}, "CABD")
-        self.check("CBAD", {"AB"}, "CABD")
-
-        # Extended group
-        self.check("ABCD", {"AB", "AD"}, "ABDC")
-        self.check("DBCA", {"AB", "AD"}, "ADBC")
-
-        # Non-connected groups
-        self.check("ABCDEF", {"CB", "ED"}, "ACBEDF")
-        self.check("ADEBCF", {"CB", "ED"}, "AEDCBF")
-        self.check("ADEFBC", {"CB", "ED"}, "AEDFCB")
-        self.check("DBAFEC", {"CB", "ED"}, "EDCBAF")
-
-    def test_it_discards_missing_dependencies(self):
-        A, B, C, D = self.get_mock_migrations()
-        C.depends.add(Mock())
-        assert list(topological_sort([A, B, C, D])) == [A, B, C, D]
-
-    def test_it_catches_cycles(self):
-        A, B, C, D = self.get_mock_migrations()
-        C.depends.add(C)
-        with pytest.raises(exceptions.BadMigration):
-            self.check("ABCD", {"AA"}, "")
-        with pytest.raises(exceptions.BadMigration):
-            self.check("ABCD", {"AB", "BA"}, "")
-        with pytest.raises(exceptions.BadMigration):
-            self.check("ABCD", {"AB", "BC", "CB"}, "")
-        with pytest.raises(exceptions.BadMigration):
-            self.check("ABCD", {"AB", "BC", "CA"}, "")
-
-    def test_it_handles_multiple_edges_to_the_same_node(self):
-        self.check("ABCD", {"AB", "AC", "AD"}, "ABCD")
-        self.check("DCBA", {"AB", "AC", "AD"}, "ADCB")
-
-    def test_it_handles_multiple_edges_to_the_same_node2(self):
-        #      A --> B
-        #      |     ^
-        #      v     |
-        #      C --- +
-        for input_order in itertools.permutations("ABC"):
-            self.check(input_order, {"AB", "AC", "CB"}, "ACB")
-
-
 class TestMigrationList(object):
     def test_can_create_empty(self):
         m = MigrationList()
@@ -420,9 +346,7 @@ class TestReadMigrations(object):
         The yoyo new command creates temporary files in the migrations directory.
         These shouldn't be picked up by yoyo apply etc
         """
-        with migrations_dir(
-            **{newmigration.tempfile_prefix + "test": ""}
-        ) as tmpdir:
+        with migrations_dir(**{newmigration.tempfile_prefix + "test": ""}) as tmpdir:
             assert len(read_migrations(tmpdir)) == 0
 
     def test_it_loads_post_apply_scripts(self):
@@ -441,12 +365,8 @@ class TestReadMigrations(object):
             m.load()
             assert len(m.steps) == 1
 
-    def test_it_does_not_add_duplicate_steps_with_imported_symbols(
-        self, tmpdir
-    ):
-        with migrations_dir(
-            a="from yoyo import step; step('SELECT 1')"
-        ) as tmpdir:
+    def test_it_does_not_add_duplicate_steps_with_imported_symbols(self, tmpdir):
+        with migrations_dir(a="from yoyo import step; step('SELECT 1')") as tmpdir:
             m = read_migrations(tmpdir)[0]
             m.load()
             assert len(m.steps) == 1
@@ -535,9 +455,7 @@ class TestReadMigrations(object):
 
     def test_it_sets_depends_for_sql_migrations(self):
         def check(sql, expected):
-            with migrations_dir(
-                **{"1.sql": "", "2.sql": "", "3.sql": sql}
-            ) as tmp:
+            with migrations_dir(**{"1.sql": "", "2.sql": "", "3.sql": sql}) as tmp:
 
                 migration = read_migrations(tmp)[-1]
                 migration.load()
@@ -638,27 +556,20 @@ class TestLogging(object):
             "from _yoyo_log "
             "ORDER BY id DESC LIMIT 1"
         )
-        return {
-            d[0]: value
-            for d, value in zip(cursor.description, cursor.fetchone())
-        }
+        return {d[0]: value for d, value in zip(cursor.description, cursor.fetchone())}
 
     def get_log_count(self, backend):
         return backend.execute("SELECT count(1) FROM _yoyo_log").fetchone()[0]
 
     def test_it_logs_apply_and_rollback(self, backend):
-        with migrations_dir(
-            a='step("CREATE TABLE yoyo_test (id INT)")'
-        ) as tmpdir:
+        with migrations_dir(a='step("CREATE TABLE yoyo_test (id INT)")') as tmpdir:
             migrations = read_migrations(tmpdir)
             backend.apply_migrations(migrations)
             assert self.get_log_count(backend) == 1
             logged = self.get_last_log_entry(backend)
             assert logged["migration_id"] == "a"
             assert logged["operation"] == "apply"
-            assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(
-                seconds=3
-            )
+            assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(seconds=3)
             apply_time = logged["created_at_utc"]
 
             backend.rollback_migrations(migrations)
@@ -669,18 +580,14 @@ class TestLogging(object):
             assert logged["created_at_utc"] >= apply_time
 
     def test_it_logs_mark_and_unmark(self, backend):
-        with migrations_dir(
-            a='step("CREATE TABLE yoyo_test (id INT)")'
-        ) as tmpdir:
+        with migrations_dir(a='step("CREATE TABLE yoyo_test (id INT)")') as tmpdir:
             migrations = read_migrations(tmpdir)
             backend.mark_migrations(migrations)
             assert self.get_log_count(backend) == 1
             logged = self.get_last_log_entry(backend)
             assert logged["migration_id"] == "a"
             assert logged["operation"] == "mark"
-            assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(
-                seconds=3
-            )
+            assert logged["created_at_utc"] >= datetime.utcnow() - timedelta(seconds=3)
             marked_time = logged["created_at_utc"]
 
             backend.unmark_migrations(migrations)
