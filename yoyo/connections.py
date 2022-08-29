@@ -20,28 +20,8 @@ from urllib.parse import urlencode
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 
-from .migrations import default_migration_table
-from .backends import PostgresqlBackend
-from .backends import RedshiftBackend
-from .backends import SQLiteBackend
-from .backends import ODBCBackend
-from .backends import OracleBackend
-from .backends import MySQLBackend
-from .backends import MySQLdbBackend
-from .backends import SnowflakeBackend
-
-BACKENDS = {
-    "odbc": ODBCBackend,
-    "oracle": OracleBackend,
-    "postgresql": PostgresqlBackend,
-    "postgres": PostgresqlBackend,
-    "psql": PostgresqlBackend,
-    "mysql": MySQLBackend,
-    "mysql+mysqldb": MySQLdbBackend,
-    "sqlite": SQLiteBackend,
-    "snowflake": SnowflakeBackend,
-    "redshift": RedshiftBackend,
-}
+from yoyo.backends import get_backend_class
+from yoyo.migrations import default_migration_table
 
 
 _DatabaseURI = namedtuple(
@@ -91,7 +71,7 @@ def get_backend(uri, migration_table=default_migration_table):
     """
     parsed = parse_uri(uri)
     try:
-        backend_class = BACKENDS[parsed.scheme.lower()]
+        backend_class = get_backend_class(parsed.scheme.lower())
     except KeyError:
         raise BadConnectionURI(
             "Unrecognised database connection scheme %r" % parsed.scheme
@@ -119,12 +99,8 @@ def parse_uri(s):
 
     return DatabaseURI(
         scheme=result.scheme,
-        username=(
-            unquote(result.username) if result.username is not None else None
-        ),
-        password=(
-            unquote(result.password) if result.password is not None else None
-        ),
+        username=(unquote(result.username) if result.username is not None else None),
+        password=(unquote(result.password) if result.password is not None else None),
         hostname=result.hostname,
         port=result.port,
         database=result.path[1:] if result.path else None,

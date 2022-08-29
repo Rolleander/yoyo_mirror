@@ -19,6 +19,7 @@ from importlib import import_module
 from itertools import count
 from logging import getLogger
 from typing import Dict
+from importlib_metadata import entry_points
 
 import getpass
 import os
@@ -789,6 +790,11 @@ class SnowflakeBackend(DatabaseBackend):
 
     def savepoint_rollback(self, id):
         pass
+
+
+def get_backend_class(name):
+    backend_eps = entry_points(group="yoyo.backends")
+    return backend_eps[name].load()
 
 
 def get_dbapi_module(name):
