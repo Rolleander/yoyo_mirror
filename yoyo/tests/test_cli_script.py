@@ -25,7 +25,7 @@ import sys
 import textwrap
 
 from mock import Mock, patch, call
-import frozendate
+import freezegun
 import pytest
 import tms
 
@@ -429,13 +429,9 @@ class TestNewMigration(TestInteractiveScript):
                 assert "__depends__ = {'m2', 'm3'}" in f.read()
 
     def test_it_names_file_by_date_and_sequence(self, tmpdir):
-        with frozendate.freeze(2001, 1, 1):
-            main(
-                ["new", "-b", "-m", "foo", str(tmpdir), "--database", dburi_sqlite3]
-            )
-            main(
-                ["new", "-b", "-m", "bar", str(tmpdir), "--database", dburi_sqlite3]
-            )
+        with freezegun.freeze_time("2001-1-1"):
+            main(["new", "-b", "-m", "foo", str(tmpdir), "--database", dburi_sqlite3])
+            main(["new", "-b", "-m", "bar", str(tmpdir), "--database", dburi_sqlite3])
         names = [n for n in sorted(os.listdir(str(tmpdir))) if n.endswith(".py")]
         assert names[0].startswith("20010101_01_")
         assert names[0].endswith("-foo.py")
@@ -519,7 +515,7 @@ class TestNewMigration(TestInteractiveScript):
 
     def test_it_calls_post_create_command(self, tmpdir):
         self.writeconfig(post_create_command="/bin/ls -l {} {}")
-        with frozendate.freeze(2001, 1, 1):
+        with freezegun.freeze_time("2001-1-1"):
             main(["new", "-b", str(tmpdir), "--database", dburi_sqlite3])
         is_filename = tms.Str(
             lambda s: os.path.basename(s).startswith("20010101_01_")
