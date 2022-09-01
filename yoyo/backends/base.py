@@ -28,15 +28,15 @@ import socket
 import time
 import uuid
 
-from . import exceptions
-from . import internalmigrations
-from . import utils
-from .migrations import topological_sort
+from yoyo import exceptions
+from yoyo import internalmigrations
+from yoyo import utils
+from yoyo.migrations import topological_sort
 
 logger = getLogger("yoyo.migrations")
 
 
-class TransactionManager(object):
+class TransactionManager:
     """
     Returned by the :meth:`~yoyo.backends.DatabaseBackend.transaction`
     context manager.
@@ -112,7 +112,7 @@ class SavepointTransactionManager(TransactionManager):
         self.backend.savepoint_rollback(self.id)
 
 
-class DatabaseBackend(object):
+class DatabaseBackend:
 
     driver_module = ""  # type: str
 
@@ -564,232 +564,6 @@ class DatabaseBackend(object):
             "operation": operation,
             "comment": comment,
         }
-
-
-class ODBCBackend(DatabaseBackend):
-    driver_module = "pyodbc"
-
-    def connect(self, dburi):
-        args = [
-            ("UID", dburi.username),
-            ("PWD", dburi.password),
-            ("ServerName", dburi.hostname),
-            ("Port", dburi.port),
-            ("Database", dburi.database),
-        ]
-        args.extend(dburi.args.items())
-        s = ";".join("{}={}".format(k, v) for k, v in args if v is not None)
-        return self.driver.connect(s)
-
-
-class OracleBackend(DatabaseBackend):
-
-    driver_module = "cx_Oracle"
-    list_tables_sql = "SELECT table_name FROM all_tables WHERE owner=user"
-
-    def begin(self):
-        """Oracle is always in a transaction, and has no "BEGIN" statement."""
-        self._in_transaction = True
-
-    def connect(self, dburi):
-        kwargs = dburi.args
-        if dburi.username is not None:
-            kwargs["user"] = dburi.username
-        if dburi.password is not None:
-            kwargs["password"] = dburi.password
-        # Oracle combines the hostname, port and database into a single DSN.
-        # The DSN can also be a "net service name"
-        kwargs["dsn"] = ""
-        if dburi.hostname is not None:
-            kwargs["dsn"] = dburi.hostname
-        if dburi.port is not None:
-            kwargs["dsn"] += ":{0}".format(dburi.port)
-        if dburi.database is not None:
-            if kwargs["dsn"]:
-                kwargs["dsn"] += "/{0}".format(dburi.database)
-            else:
-                kwargs["dsn"] = dburi.database
-
-        return self.driver.connect(**kwargs)
-
-
-class MySQLBackend(DatabaseBackend):
-
-    driver_module = "pymysql"
-    list_tables_sql = (
-        "SELECT table_name FROM information_schema.tables "
-        "WHERE table_schema = :database"
-    )
-
-    def connect(self, dburi):
-        kwargs = {"db": dburi.database}
-        kwargs.update(dburi.args)
-        if dburi.username is not None:
-            kwargs["user"] = dburi.username
-        if dburi.password is not None:
-            kwargs["passwd"] = dburi.password
-        if dburi.hostname is not None:
-            kwargs["host"] = dburi.hostname
-        if dburi.port is not None:
-            kwargs["port"] = dburi.port
-        if "unix_socket" in dburi.args:
-            kwargs["unix_socket"] = dburi.args["unix_socket"]
-        if "ssl" in dburi.args:
-            kwargs["ssl"] = {}
-
-            if "sslca" in dburi.args:
-                kwargs["ssl"]["ca"] = dburi.args["sslca"]
-
-            if "sslcapath" in dburi.args:
-                kwargs["ssl"]["capath"] = dburi.args["sslcapath"]
-
-            if "sslcert" in dburi.args:
-                kwargs["ssl"]["cert"] = dburi.args["sslcert"]
-
-            if "sslkey" in dburi.args:
-                kwargs["ssl"]["key"] = dburi.args["sslkey"]
-
-            if "sslcipher" in dburi.args:
-                kwargs["ssl"]["cipher"] = dburi.args["sslcipher"]
-
-        kwargs["db"] = dburi.database
-        return self.driver.connect(**kwargs)
-
-    def quote_identifier(self, identifier):
-        sql_mode = self.execute("SHOW VARIABLES LIKE 'sql_mode'").fetchone()[1]
-        if "ansi_quotes" in sql_mode.lower():
-            return super(MySQLBackend, self).quote_identifier(identifier)
-        return "`{}`".format(identifier)
-
-
-class MySQLdbBackend(MySQLBackend):
-    driver_module = "MySQLdb"
-
-
-class SQLiteBackend(DatabaseBackend):
-
-    driver_module = "sqlite3"
-    list_tables_sql = "SELECT name FROM sqlite_master WHERE type = 'table'"
-
-    def connect(self, dburi):
-        # Ensure that multiple connections share the same data
-        # https://sqlite.org/sharedcache.html
-        conn = self.driver.connect(
-            f"file:{dburi.database}?cache=shared",
-            uri=True,
-            detect_types=self.driver.PARSE_DECLTYPES,
-        )
-        conn.isolation_level = None
-        return conn
-
-
-class PostgresqlBackend(DatabaseBackend):
-
-    driver_module = "psycopg2"
-    schema = None
-    list_tables_sql = (
-        "SELECT table_name FROM information_schema.tables "
-        "WHERE table_schema = :schema"
-    )
-
-    def connect(self, dburi):
-        kwargs = {"dbname": dburi.database}
-        kwargs.update(dburi.args)
-        if dburi.username is not None:
-            kwargs["user"] = dburi.username
-        if dburi.password is not None:
-            kwargs["password"] = dburi.password
-        if dburi.port is not None:
-            kwargs["port"] = dburi.port
-        if dburi.hostname is not None:
-            kwargs["host"] = dburi.hostname
-        self.schema = kwargs.pop("schema", None)
-        return self.driver.connect(**kwargs)
-
-    @contextmanager
-    def disable_transactions(self):
-        with super(PostgresqlBackend, self).disable_transactions():
-            saved = self.connection.autocommit
-            self.connection.autocommit = True
-            yield
-            self.connection.autocommit = saved
-
-    def init_connection(self, connection):
-        if self.schema:
-            cursor = connection.cursor()
-            cursor.execute("SET search_path TO {}".format(self.schema))
-
-    def list_tables(self):
-        current_schema = self.execute("SELECT current_schema").fetchone()[0]
-        return super(PostgresqlBackend, self).list_tables(schema=current_schema)
-
-
-class RedshiftBackend(PostgresqlBackend):
-    def list_tables(self):
-        current_schema = self.execute("SELECT current_schema()").fetchone()[0]
-        return super(PostgresqlBackend, self).list_tables(schema=current_schema)
-
-    # Redshift does not support ROLLBACK TO SAVEPOINT
-    def savepoint(self, id):
-        pass
-
-    def savepoint_release(self, id):
-        pass
-
-    def savepoint_rollback(self, id):
-        self.rollback()
-
-    # Redshift does not enforce primary and unique keys
-    def _insert_lock_row(self, pid, timeout, poll_interval=0.5):
-        poll_interval = min(poll_interval, timeout)
-        started = time.time()
-        while True:
-            with self.transaction():
-                # prevents isolation violation errors
-                self.execute("LOCK {}".format(self.lock_table_quoted))
-                cursor = self.execute(
-                    "SELECT pid FROM {}".format(self.lock_table_quoted)
-                )
-                row = cursor.fetchone()
-                if not row:
-                    self.execute(
-                        "INSERT INTO {} (locked, ctime, pid) "
-                        "VALUES (1, :when, :pid)".format(self.lock_table_quoted),
-                        {"when": datetime.utcnow(), "pid": pid},
-                    )
-                    return
-                elif timeout and time.time() > started + timeout:
-                    raise exceptions.LockTimeout(
-                        "Process {} has locked this database "
-                        "(run yoyo break-lock to remove this lock)".format(row[0])
-                    )
-                else:
-                    time.sleep(poll_interval)
-
-
-class SnowflakeBackend(DatabaseBackend):
-
-    driver_module = "snowflake.connector"
-
-    def connect(self, dburi):
-        database, schema = dburi.database.split("/")
-        return self.driver.connect(
-            user=dburi.username,
-            password=dburi.password,
-            account=dburi.hostname,
-            database=database,
-            schema=schema,
-            **dburi.args,
-        )
-
-    def savepoint(self, id):
-        pass
-
-    def savepoint_release(self, id):
-        pass
-
-    def savepoint_rollback(self, id):
-        pass
 
 
 def get_backend_class(name):

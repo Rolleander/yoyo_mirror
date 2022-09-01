@@ -10,6 +10,7 @@ import pytest
 from yoyo import backends
 from yoyo import read_migrations
 from yoyo import exceptions
+from yoyo.backends.contrib.redshift import RedshiftBackend
 from yoyo.connections import get_backend
 from yoyo.tests import get_test_backends
 from yoyo.tests import get_test_dburis
@@ -74,8 +75,8 @@ class TestTransactionHandling(object):
 
     def test_backend_detects_transactional_ddl(self, backend):
         expected = {
+            RedshiftBackend: True,
             backends.PostgresqlBackend: True,
-            backends.RedshiftBackend: True,
             backends.SQLiteBackend: True,
             backends.MySQLBackend: False,
         }

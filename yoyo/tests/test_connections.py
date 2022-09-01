@@ -18,6 +18,8 @@ from unittest.mock import patch, call, MagicMock
 import pytest
 
 from yoyo.connections import parse_uri, BadConnectionURI
+from yoyo import backends
+from yoyo.backends.contrib import odbc
 
 
 class MockDatabaseError(Exception):
@@ -73,17 +75,15 @@ class TestParseURI:
 
 
 @patch(
-    "yoyo.backends.get_dbapi_module",
+    "yoyo.backends.base.get_dbapi_module",
     return_value=MagicMock(DatabaseError=MockDatabaseError, paramstyle="qmark"),
 )
 def test_connections(get_dbapi_module):
 
-    from yoyo import backends
-
     u = parse_uri("odbc://scott:tiger@db.example.org:42/northwind?foo=bar")
     cases = [
         (
-            backends.ODBCBackend,
+            odbc.ODBCBackend,
             "pyodbc",
             call(
                 "UID=scott;PWD=tiger;ServerName=db.example.org;"

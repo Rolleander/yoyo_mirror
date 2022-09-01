@@ -1,6 +1,6 @@
 import pytest
 
-from yoyo import backends
+import yoyo.backends.core
 from yoyo.connections import get_backend
 from yoyo.tests import dburi_sqlite3
 from yoyo.tests import get_test_backends
@@ -13,7 +13,7 @@ def _backend(dburi):
     """
     backend = get_backend(dburi)
     with backend.transaction():
-        if backend.__class__ is backends.MySQLBackend:
+        if backend.__class__ is yoyo.backends.core.MySQLBackend:
             backend.execute(
                 "CREATE TABLE yoyo_t (id CHAR(1) primary key) ENGINE=InnoDB"
             )
