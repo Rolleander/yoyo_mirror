@@ -39,9 +39,9 @@ from yoyo.scripts import newmigration
 
 
 def is_tmpfile(p, directory=None):
-    return (
-        p.startswith(directory) if directory else True
-    ) and os.path.basename(p).startswith(newmigration.tempfile_prefix)
+    return (p.startswith(directory) if directory else True) and os.path.basename(
+        p
+    ).startswith(newmigration.tempfile_prefix)
 
 
 class TestInteractiveScript(object):
@@ -127,9 +127,9 @@ class TestYoyoScript(TestInteractiveScript):
 
     def test_it_prompts_password(self, tmpdir):
         dburi = "sqlite://user@/:memory"
-        with patch(
-            "yoyo.scripts.main.getpass", return_value="fish"
-        ) as getpass, patch("yoyo.connections.get_backend") as get_backend:
+        with patch("yoyo.scripts.main.getpass", return_value="fish") as getpass, patch(
+            "yoyo.connections.get_backend"
+        ) as get_backend:
             main(["apply", str(tmpdir), "--database", dburi, "--prompt-password"])
             assert getpass.call_count == 1
             assert get_backend.call_args == call(
@@ -189,9 +189,7 @@ class TestYoyoScript(TestInteractiveScript):
 
         self.confirm.return_value = True
         main(["apply", str(tmpdir)])
-        prompts = [
-            args[0].lower() for args, kwargs in self.confirm.call_args_list
-        ]
+        prompts = [args[0].lower() for args, kwargs in self.confirm.call_args_list]
         assert len(prompts) == 2
         assert prompts[0].startswith("move legacy configuration")
         assert prompts[1].startswith("delete legacy configuration")
@@ -243,9 +241,7 @@ class TestYoyoScript(TestInteractiveScript):
             run_migrations = partial(
                 main, ["apply", "-b", tmpdir, "--database", str(backend.uri)]
             )
-            threads = [
-                threading.Thread(target=run_migrations) for ix in range(20)
-            ]
+            threads = [threading.Thread(target=run_migrations) for ix in range(20)]
             for t in threads:
                 t.start()
             for t in threads:
@@ -266,16 +262,14 @@ class TestYoyoScript(TestInteractiveScript):
         )
         backend.commit()
         main(["break-lock", "--database", dburi])
-        lock_count = backend.execute(
-            "SELECT COUNT(1) FROM yoyo_lock"
-        ).fetchone()[0]
+        lock_count = backend.execute("SELECT COUNT(1) FROM yoyo_lock").fetchone()[0]
         assert lock_count == 0
 
     def test_it_prompts_password_on_break_lock(self):
         dburi = "sqlite://user@/:memory"
-        with patch(
-            "yoyo.scripts.main.getpass", return_value="fish"
-        ) as getpass, patch("yoyo.connections.get_backend") as get_backend:
+        with patch("yoyo.scripts.main.getpass", return_value="fish") as getpass, patch(
+            "yoyo.connections.get_backend"
+        ) as get_backend:
             main(["break-lock", "--database", dburi, "--prompt-password"])
             assert getpass.call_count == 1
             assert get_backend.call_args == call(
@@ -331,9 +325,7 @@ class TestMarkCommand(TestInteractiveScript):
             backend = get_backend(self.dburi)
             backend.apply_migrations(migrations[:1])
 
-            with patch(
-                "yoyo.scripts.migrate.prompt_migrations"
-            ) as prompt_migrations:
+            with patch("yoyo.scripts.migrate.prompt_migrations") as prompt_migrations:
                 main(["mark", tmpdir, "--database", self.dburi])
                 _, prompted, _ = prompt_migrations.call_args[0]
                 prompted = [m.id for m in prompted]
@@ -373,9 +365,7 @@ class TestUnmarkCommand(TestInteractiveScript):
             backend.apply_migrations(migrations[:2])
             assert len(backend.get_applied_migration_hashes()) == 2
 
-            with patch(
-                "yoyo.scripts.migrate.prompt_migrations"
-            ) as prompt_migrations:
+            with patch("yoyo.scripts.migrate.prompt_migrations") as prompt_migrations:
                 main(["unmark", tmpdir, "--database", self.dburi])
                 _, prompted, _ = prompt_migrations.call_args[0]
                 prompted = [m.id for m in prompted]
@@ -454,9 +444,7 @@ class TestNewMigration(TestInteractiveScript):
         # default to $VISUAL
         with patch("os.environ", {"EDITOR": "ed", "VISUAL": "visualed"}):
             main(["new", str(tmpdir), "--database", dburi_sqlite3])
-            assert self.subprocess.call.call_args == call(
-                ["visualed", tms.Unicode()]
-            )
+            assert self.subprocess.call.call_args == call(["visualed", tms.Unicode()])
 
         # fallback to $EDITOR
         with patch("os.environ", {"EDITOR": "ed"}):
@@ -490,9 +478,7 @@ class TestNewMigration(TestInteractiveScript):
 
         self.subprocess.call = write_migration
         main(["new", str(tmpdir), "--database", dburi_sqlite3])
-        prompts = [
-            args[0].lower() for args, kwargs in self.prompt.call_args_list
-        ]
+        prompts = [args[0].lower() for args, kwargs in self.prompt.call_args_list]
         assert "retry editing?" in prompts[0]
 
     def test_it_defaults_docstring_to_message(self, tmpdir):
@@ -508,18 +494,14 @@ class TestNewMigration(TestInteractiveScript):
             ]
         )
         names = [n for n in sorted(os.listdir(tmpdir)) if n.endswith(".py")]
-        with open(
-            os.path.join(str(tmpdir), names[0]), "r", encoding="utf-8"
-        ) as f:
+        with open(os.path.join(str(tmpdir), names[0]), "r", encoding="utf-8") as f:
             assert "your ad here" in f.read()
 
     def test_it_calls_post_create_command(self, tmpdir):
         self.writeconfig(post_create_command="/bin/ls -l {} {}")
         with freezegun.freeze_time("2001-1-1"):
             main(["new", "-b", str(tmpdir), "--database", dburi_sqlite3])
-        is_filename = tms.Str(
-            lambda s: os.path.basename(s).startswith("20010101_01_")
-        )
+        is_filename = tms.Str(lambda s: os.path.basename(s).startswith("20010101_01_"))
         assert self.subprocess.call.call_args == call(
             ["/bin/ls", "-l", is_filename, is_filename]
         )

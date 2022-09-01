@@ -45,7 +45,7 @@ else:
         saved_attributes = termios.tcgetattr(fd)
         try:
             attributes = termios.tcgetattr(fd)  # get a fresh copy!
-            attributes[3] = (attributes[3] & ~(termios.ICANON | termios.ECHO))  # type: ignore  # noqa: E501
+            attributes[3] = attributes[3] & ~(termios.ICANON | termios.ECHO)  # type: ignore  # noqa: E501
             attributes[6][termios.VMIN] = 1  # type: ignore
             attributes[6][termios.VTIME] = 0  # type: ignore
             termios.tcsetattr(fd, termios.TCSANOW, attributes)
@@ -68,8 +68,7 @@ def prompt(prompt, options):
         ch = getch()
         if ch == os.linesep:
             ch = (
-                [o.lower() for o in options if "A" <= o <= "Z"]
-                + list(options.lower())
+                [o.lower() for o in options if "A" <= o <= "Z"] + list(options.lower())
             )[0]
         print(ch)
         if ch.lower() not in options.lower():
@@ -175,9 +174,7 @@ def change_param_style(target_style, sql, bind_parameters):
         r"(?=\W|$)"
     )
 
-    transformed_sql = pattern.sub(
-        lambda match: param_gen(match.group(1)), sql
-    )
+    transformed_sql = pattern.sub(lambda match: param_gen(match.group(1)), sql)
     if positional:
         positional_params = []
         for match in pattern.finditer(sql):
@@ -192,6 +189,4 @@ def unidecode(s: str) -> str:
     Return ``s`` with unicode diacritics removed.
     """
     combining = unicodedata.combining
-    return "".join(
-        c for c in unicodedata.normalize("NFD", s) if not combining(c)
-    )
+    return "".join(c for c in unicodedata.normalize("NFD", s) if not combining(c))

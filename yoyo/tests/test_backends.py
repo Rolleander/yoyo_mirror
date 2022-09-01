@@ -101,14 +101,10 @@ class TestTransactionHandling(object):
             backend.execute("INSERT INTO yoyo_b VALUES (1)")
             trans.rollback()
 
-        count_a = backend.execute("SELECT COUNT(1) FROM yoyo_a").fetchall()[0][
-            0
-        ]
+        count_a = backend.execute("SELECT COUNT(1) FROM yoyo_a").fetchall()[0][0]
         assert count_a == 1
 
-        count_b = backend.execute("SELECT COUNT(1) FROM yoyo_b").fetchall()[0][
-            0
-        ]
+        count_b = backend.execute("SELECT COUNT(1) FROM yoyo_b").fetchall()[0][0]
         assert count_b == 0
 
     def test_statements_requiring_no_transaction(self):
@@ -183,19 +179,14 @@ class TestConcurrency(object):
         return lock_sleep
 
     def skip_if_not_concurrency_safe(self, backend):
-        if (
-            "sqlite" in backend.uri.scheme
-            and backend.uri.database == ":memory:"
-        ):
+        if "sqlite" in backend.uri.scheme and backend.uri.database == ":memory:":
             pytest.skip(
                 "Concurrency tests not supported for SQLite "
                 "in-memory databases, which cannot be shared "
                 "between threads"
             )
         if backend.driver.threadsafety < 1:
-            pytest.skip(
-                "Concurrency tests not supported for non-threadsafe backends"
-            )
+            pytest.skip("Concurrency tests not supported for non-threadsafe backends")
 
     def test_lock(self, dburi):
         """
@@ -310,9 +301,7 @@ class TestInitConnection(object):
 
         finally:
             with backend.transaction():
-                backend.execute(
-                    "ALTER DATABASE {} RESET SEARCH_PATH".format(dbname)
-                )
+                backend.execute("ALTER DATABASE {} RESET SEARCH_PATH".format(dbname))
                 backend.execute("DROP SCHEMA custom_schema CASCADE")
 
     def test_postgresql_migrations_can_change_schema_search_path(self):
@@ -324,9 +313,7 @@ class TestInitConnection(object):
             pytest.skip("PostgreSQL backend not available")
         backend = get_backend(dburi)
         with migrations_dir(
-            **{
-                "1.sql": "SELECT pg_catalog.set_config('search_path', '', false)"
-            }
+            **{"1.sql": "SELECT pg_catalog.set_config('search_path', '', false)"}
         ) as tmpdir:
             migrations = read_migrations(tmpdir)
             backend.apply_migrations(migrations)

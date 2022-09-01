@@ -68,9 +68,7 @@ def parse_args(argv=None):
 
     # Read the config file and create a dictionary of defaults for argparser
     config = read_config(
-        (global_args.config or find_config())
-        if global_args.use_config_file
-        else None
+        (global_args.config or find_config()) if global_args.use_config_file else None
     )
 
     defaults = {}
@@ -116,8 +114,7 @@ def make_argparser():
         dest="verbosity",
         action="count",
         default=min_verbosity,
-        help="Verbose output. Use multiple times "
-        "to increase level of verbosity",
+        help="Verbose output. Use multiple times to increase level of verbosity",
     )
     global_parser.add_argument(
         "-b",
@@ -180,9 +177,7 @@ def upgrade_legacy_config(args, config, sources):
 
         legacy_config = read_config(path)
 
-        def transfer_setting(
-            oldname, newname, transform=None, section="DEFAULT"
-        ):
+        def transfer_setting(oldname, newname, transform=None, section="DEFAULT"):
             try:
                 config.get(section, newname)
             except configparser.NoOptionError:
@@ -205,9 +200,7 @@ def upgrade_legacy_config(args, config, sources):
         config_path = args.config or CONFIG_FILENAME
         if not args.batch_mode:
             if utils.confirm(
-                "Move legacy configuration in {!r} to {!r}?".format(
-                    path, config_path
-                )
+                "Move legacy configuration in {!r} to {!r}?".format(path, config_path)
             ):
                 save_config(config, config_path)
                 try:
@@ -231,9 +224,7 @@ def upgrade_legacy_config(args, config, sources):
             )
 
             try:
-                args.database = args.database or legacy_config.get(
-                    "DEFAULT", "dburi"
-                )
+                args.database = args.database or legacy_config.get("DEFAULT", "dburi")
             except configparser.NoOptionError:
                 pass
             try:

@@ -57,9 +57,7 @@ def test_v3_preserves_history_when_upgrading(backend):
 
     cursor = backend.execute(
         "SELECT migration_hash, migration_id, applied_at_utc "
-        "FROM {0.migration_table_quoted} order by applied_at_utc".format(
-            backend
-        )
+        "FROM {0.migration_table_quoted} order by applied_at_utc".format(backend)
     )
     applied = list(cursor.fetchall())
     assert applied == [

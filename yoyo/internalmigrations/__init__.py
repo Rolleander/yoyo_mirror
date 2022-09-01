@@ -67,8 +67,6 @@ def mark_schema_version(backend, version):
     if version < USE_VERSION_TABLE_FROM:
         return
     backend.execute(
-        "INSERT INTO {0.version_table_quoted} VALUES (:version, :when)".format(
-            backend
-        ),
+        "INSERT INTO {0.version_table_quoted} VALUES (:version, :when)".format(backend),
         {"version": version, "when": datetime.utcnow()},
     )

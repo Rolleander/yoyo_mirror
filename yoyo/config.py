@@ -60,8 +60,7 @@ class CustomInterpolation(configparser.BasicInterpolation):
 def get_interpolation_defaults(path: Optional[str] = None):
     parser = configparser.ConfigParser()
     defaults = {
-        parser.optionxform(k): v.replace("%", "%%")
-        for k, v in os.environ.items()
+        parser.optionxform(k): v.replace("%", "%%") for k, v in os.environ.items()
     }
     if path:
         defaults["here"] = os.path.dirname(os.path.abspath(path))
@@ -80,9 +79,7 @@ def update_argparser_defaults(parser, defaults):
     arguments the parser has configured.
     """
     known_args = {action.dest for action in parser._actions}
-    parser.set_defaults(
-        **{k: v for k, v in defaults.items() if k in known_args}
-    )
+    parser.set_defaults(**{k: v for k, v in defaults.items() if k in known_args})
 
 
 def read_config(src: Optional[str]) -> ConfigParser:
@@ -179,7 +176,7 @@ def find_includes(
     return result[INHERIT], result[INCLUDE]
 
 
-def merge_configs(configs: List[ConfigParser],) -> ConfigParser:
+def merge_configs(configs: List[ConfigParser]) -> ConfigParser:
     def merge(c1, c2):
         c1.read_dict(c2)
         return c1

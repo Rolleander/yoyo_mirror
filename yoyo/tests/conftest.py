@@ -15,9 +15,7 @@ def _backend(dburi):
     with backend.transaction():
         if backend.__class__ is backends.MySQLBackend:
             backend.execute(
-                "CREATE TABLE yoyo_t "
-                "(id CHAR(1) primary key) "
-                "ENGINE=InnoDB"
+                "CREATE TABLE yoyo_t (id CHAR(1) primary key) ENGINE=InnoDB"
             )
         else:
             backend.execute("CREATE TABLE yoyo_t " "(id CHAR(1) primary key)")

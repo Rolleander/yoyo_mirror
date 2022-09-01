@@ -67,16 +67,14 @@ class TestParseURI:
 
     def test_passwords_with_slashes_dont_break_netloc(self):
         parsed = parse_uri("postgresql://user:a%2Fb@localhost:5432/db")
-        assert parsed.netloc == 'user:a%2Fb@localhost:5432'
+        assert parsed.netloc == "user:a%2Fb@localhost:5432"
         assert parsed.port == 5432
-        assert parsed.password == 'a/b'
+        assert parsed.password == "a/b"
 
 
 @patch(
     "yoyo.backends.get_dbapi_module",
-    return_value=MagicMock(
-        DatabaseError=MockDatabaseError, paramstyle="qmark"
-    ),
+    return_value=MagicMock(DatabaseError=MockDatabaseError, paramstyle="qmark"),
 )
 def test_connections(get_dbapi_module):
 

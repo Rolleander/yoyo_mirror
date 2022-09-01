@@ -21,8 +21,7 @@ def upgrade(backend):
             backend.get_log_data(),
             operation="apply",
             comment=(
-                "this log entry created automatically by an "
-                "internal schema upgrade"
+                "this log entry created automatically by an internal schema upgrade"
             ),
             created_at_utc=created_at,
             migration_hash=migration_hash,

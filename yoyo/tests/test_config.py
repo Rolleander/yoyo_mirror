@@ -133,12 +133,14 @@ class TestInheritance:
     def test_it_raises_on_not_found(self):
         with pytest.raises(FileNotFoundError):
             _test_files(
-                {"a.ini": "[DEFAULT]\n%inherit = b.ini\n"}, {"DEFAULT": {}},
+                {"a.ini": "[DEFAULT]\n%inherit = b.ini\n"},
+                {"DEFAULT": {}},
             )
 
     def test_it_ignores_not_found(self):
         _test_files(
-            {"a.ini": "[DEFAULT]\n%inherit = ?b.ini\n"}, {"DEFAULT": {}},
+            {"a.ini": "[DEFAULT]\n%inherit = ?b.ini\n"},
+            {"DEFAULT": {}},
         )
 
     def test_it_traps_circular_references(self):

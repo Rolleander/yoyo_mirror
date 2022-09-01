@@ -125,9 +125,11 @@ def read_sql_migration(
         with open(path, "r", encoding="UTF-8") as f:
             statements = sqlparse.split(f.read())
             if statements:
-                (directives, leading_comment, sql,) = parse_metadata_from_sql_comments(
-                    statements[0]
-                )
+                (
+                    directives,
+                    leading_comment,
+                    sql,
+                ) = parse_metadata_from_sql_comments(statements[0])
                 statements[0] = sql
     statements = [s for s in statements if s.strip()]
     return directives, leading_comment, statements
@@ -495,7 +497,9 @@ def read_migrations(*sources):
                 migration_class = PostApplyHookMigration
 
             migration = migration_class(
-                os.path.splitext(os.path.basename(path))[0], path, source_dir=source,
+                os.path.splitext(os.path.basename(path))[0],
+                path,
+                source_dir=source,
             )
             ml = migrations.setdefault(source, MigrationList())
             if migration_class is PostApplyHookMigration:
