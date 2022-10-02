@@ -225,7 +225,9 @@ class DatabaseBackend:
         raise NotImplementedError()
 
     def quote_identifier(self, s):
-        return '"{}"'.format(s)
+        assert "\x00" not in s
+        quoted = s.replace('"', '""')
+        return f'"{quoted}"'
 
     def _check_transactional_ddl(self):
         """
