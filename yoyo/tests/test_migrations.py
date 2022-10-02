@@ -14,7 +14,7 @@
 
 from datetime import datetime
 from datetime import timedelta
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 import io
 import os
 

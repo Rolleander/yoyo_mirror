@@ -24,7 +24,7 @@ import re
 import sys
 import textwrap
 
-from mock import Mock, patch, call
+from unittest.mock import Mock, patch, call
 import freezegun
 import pytest
 import tms

@@ -2,9 +2,9 @@ from tempfile import NamedTemporaryFile
 from threading import Thread
 import time
 
-from mock import Mock
-from mock import call
-from mock import patch
+from unittest.mock import Mock
+from unittest.mock import call
+from unittest.mock import patch
 import pytest
 
 from yoyo import backends

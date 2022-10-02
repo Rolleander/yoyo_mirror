@@ -14,7 +14,7 @@
 
 import sys
 
-from mock import patch, call, MagicMock
+from unittest.mock import patch, call, MagicMock
 import pytest
 
 from yoyo.connections import parse_uri, BadConnectionURI
