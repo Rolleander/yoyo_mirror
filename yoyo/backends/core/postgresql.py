@@ -56,3 +56,11 @@ class PostgresqlBackend(DatabaseBackend):
     def list_tables(self):
         current_schema = self.execute("SELECT current_schema").fetchone()[0]
         return super(PostgresqlBackend, self).list_tables(schema=current_schema)
+
+
+class PostgresqlPsycopgBackend(PostgresqlBackend):
+    """
+    Like PostgresqlBackend, but using the newer Psycopg 3.
+    """
+
+    driver_module = "psycopg"

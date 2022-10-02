@@ -3,6 +3,7 @@ from yoyo.backends.base import get_backend_class
 from yoyo.backends.core import MySQLBackend
 from yoyo.backends.core import SQLiteBackend
 from yoyo.backends.core import PostgresqlBackend
+from yoyo.backends.core import PostgresqlPsycopgBackend
 
 __all__ = [
     "DatabaseBackend",
@@ -10,4 +11,5 @@ __all__ = [
     "MySQLBackend",
     "SQLiteBackend",
     "PostgresqlBackend",
+    "PostgresqlPsycopgBackend",
 ]

@@ -120,6 +120,9 @@ Database connections are specified using a URL. Examples:
   # PostgreSQL: unix socket connection
   database = postgresql://scott:tiger@/mydatabase
 
+  # PostgreSQL with the newer psycopg 3 driver
+  database = postgresql+psycopg://scott:tiger@localhost/mydatabase
+
   # PostgreSQL: changing the schema (via set search_path)
   database = postgresql://scott:tiger@/mydatabase?schema=some_schema
 
@@ -498,7 +501,7 @@ The following example shows how to apply migrations from inside python code:
     from yoyo import read_migrations
     from yoyo import get_backend
 
-    backend = get_backend('postgres://myuser@localhost/mydatabase')
+    backend = get_backend('postgresql://myuser@localhost/mydatabase')
     migrations = read_migrations('path/to/migrations')
 
     with backend.lock():
