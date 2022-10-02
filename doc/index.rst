@@ -515,6 +515,32 @@ The following example shows how to apply migrations from inside python code:
    :maxdepth: 2
    :caption: Contents:
 
+
+Adding custom backends
+======================
+
+Backends are discovered using Python importlib.metadata entry points.
+
+To add a custom backend, create a python package containing a subclass of
+:class:`yoyo.backends.base.DatabaseBackend` and configure it
+in the package metadata (typically in ``setup.cfg``), for example:
+
+.. code:: ini
+
+    [options.entry_points]
+
+    yoyo.backends =
+        mybackend = mypackage:MyBackend
+
+
+You can then use the backend by specifying ``'mybackend'`` as the driver
+protocol::
+
+  .. code:: sh
+
+   yoyo apply --database my_backend://...
+
+
 Contributing
 =============
 
