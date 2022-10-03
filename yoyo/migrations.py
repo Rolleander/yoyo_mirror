@@ -176,6 +176,7 @@ class Migration(object):
             self.module = types.ModuleType(self.path)
         else:
             spec = importlib.util.spec_from_file_location(self.path, self.path)
+            assert spec is not None
             self.module = importlib.util.module_from_spec(spec)
 
         self.module.step = collector.add_step  # type: ignore
@@ -210,15 +211,15 @@ class Migration(object):
 
         else:
             try:
-                if spec.loader is None:
+                if spec and spec.loader:
+                    spec.loader.exec_module(self.module)
+                else:
                     logger.exception(
                         "Could not import migration from %r: "
                         "ModuleSpec has no loader attached",
                         self.path,
                     )
                     raise exceptions.BadMigration(self.path)
-
-                spec.loader.exec_module(self.module)  # type: ignore
 
             except Exception as e:
                 logger.exception("Could not import migration from %r: %r", self.path, e)

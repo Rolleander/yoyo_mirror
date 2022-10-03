@@ -1,4 +1,5 @@
 import itertools
+import typing as t
 
 import pytest
 
@@ -7,7 +8,7 @@ from yoyo import topologicalsort
 
 class TestTopologicalSort(object):
     def check(self, nodes, edges, expected):
-        deps = {}
+        deps: t.Dict[str, t.Set[str]] = {}
         edges = edges.split() if edges else []
         for a, b in edges:
             deps.setdefault(a, set()).add(b)
