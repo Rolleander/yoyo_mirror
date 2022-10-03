@@ -25,7 +25,8 @@ def _backend(dburi):
         yield backend
     finally:
         backend.rollback()
-        drop_yoyo_tables(backend)
+        with backend.transaction():
+            drop_all_tables(backend)
 
 
 @pytest.fixture(params=get_test_dburis())
@@ -46,7 +47,14 @@ def dburi(request):
     try:
         yield request.param
     finally:
-        drop_yoyo_tables(get_backend(request.param))
+        backend = get_backend(request.param)
+        with backend.transaction():
+            drop_all_tables(backend)
+
+
+def drop_all_tables(backend):
+    for t in backend.list_tables():
+        backend.execute(f"DROP TABLE {backend.quote_identifier(t)}")
 
 
 def drop_yoyo_tables(backend):
