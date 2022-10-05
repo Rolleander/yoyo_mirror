@@ -1,3 +1,15 @@
+8.0.0
+------
+
+* Rewrite the topological sorting algorithm to provide a more stable sort
+  order. Note that this may change the order in which migrations are applied.
+* Add support for custom backends via setuptools entry points
+* Add support for the Psycopg 3 PostgreSQL driver via the
+  ``postgresql+psycopg://`` URL scheme
+* Add support for Python 3.10
+* Drop support for Python 3.6
+
+
 7.3.2 (released 2021-05-23)
 ---------------------------
 
