@@ -1,5 +1,5 @@
-8.0.0
-------
+8.0.0 (released 2022-10-05)
+---------------------------
 
 * Rewrite the topological sorting algorithm to provide a more stable sort
   order. Note that this may change the order in which migrations are applied.
