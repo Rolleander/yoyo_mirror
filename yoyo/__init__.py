@@ -34,4 +34,4 @@ from yoyo.migrations import read_migrations
 from yoyo.migrations import step
 from yoyo.migrations import transaction
 
-__version__ = "8.0.0"
+__version__ = "8.0.1.dev0"
