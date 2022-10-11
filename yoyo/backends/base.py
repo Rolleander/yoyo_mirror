@@ -237,9 +237,13 @@ class DatabaseBackend:
         table_name = "yoyo_tmp_{}".format(utils.get_random_string(10))
         table_name_quoted = self.quote_identifier(table_name)
         sql = self.create_test_table_sql.format(table_name_quoted=table_name_quoted)
-        with self.transaction() as t:
-            self.execute(sql)
-            t.rollback()
+        try:
+            with self.transaction() as t:
+                self.execute(sql)
+                t.rollback()
+        except self.DatabaseError:
+            return False
+
         try:
             with self.transaction():
                 self.execute("DROP TABLE {}".format(table_name_quoted))
