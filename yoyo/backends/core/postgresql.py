@@ -19,6 +19,13 @@ from yoyo.backends.base import DatabaseBackend
 
 
 class PostgresqlBackend(DatabaseBackend):
+    """
+    Backend for PostgreSQL and PostgreSQL compatible databases.
+
+    This backend uses psycopg2. See
+    :class:`yoyo.backends.core.postgresql.PostgresqlPsycopgBackend`
+    if you need psycopg3.
+    """
 
     driver_module = "psycopg2"
     schema = None
@@ -34,7 +41,14 @@ class PostgresqlBackend(DatabaseBackend):
         return TRANSACTION_STATUS_IDLE
 
     def connect(self, dburi):
-        kwargs = {"dbname": dburi.database}
+        kwargs = {"dbname": dburi.database, "autocommit": True}
+
+        # Default to autocommit mode: without this psycopg sends a BEGIN before
+        # every query, causing a warning when we then explicitly start a
+        # transaction. This warning becomes an error in CockroachDB. See
+        # https://todo.sr.ht/~olly/yoyo/71
+        kwargs["autocommit"] = True
+
         kwargs.update(dburi.args)
         if dburi.username is not None:
             kwargs["user"] = dburi.username
@@ -45,7 +59,10 @@ class PostgresqlBackend(DatabaseBackend):
         if dburi.hostname is not None:
             kwargs["host"] = dburi.hostname
         self.schema = kwargs.pop("schema", None)
-        return self.driver.connect(**kwargs)
+        autocommit = bool(kwargs.pop("autocommit"))
+        connection = self.driver.connect(**kwargs)
+        connection.autocommit = autocommit
+        return connection
 
     def transaction(self, rollback_on_exit=False):
 
@@ -73,6 +90,16 @@ class PostgresqlBackend(DatabaseBackend):
     def list_tables(self):
         current_schema = self.execute("SELECT current_schema").fetchone()[0]
         return super(PostgresqlBackend, self).list_tables(schema=current_schema)
+
+    def commit(self):
+        # The connection is in autocommit mode and ignores calls to
+        # ``commit()`` and ``rollback()``, so we have to issue the SQL directly
+        self.execute("COMMIT")
+        super().commit()
+
+    def rollback(self):
+        self.execute("ROLLBACK")
+        super().rollback()
 
 
 class PostgresqlPsycopgBackend(PostgresqlBackend):
