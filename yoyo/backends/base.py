@@ -278,6 +278,7 @@ class DatabaseBackend:
         """
         Begin a new transaction
         """
+        assert not self._in_transaction
         self._in_transaction = True
         self.execute("BEGIN")
 

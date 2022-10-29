@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
 from contextlib import contextmanager
 
 from yoyo.backends.base import DatabaseBackend
@@ -26,6 +27,12 @@ class PostgresqlBackend(DatabaseBackend):
         "WHERE table_schema = :schema"
     )
 
+    @property
+    def TRANSACTION_STATUS_IDLE(self):
+        from psycopg2.extensions import TRANSACTION_STATUS_IDLE
+
+        return TRANSACTION_STATUS_IDLE
+
     def connect(self, dburi):
         kwargs = {"dbname": dburi.database}
         kwargs.update(dburi.args)
@@ -39,6 +46,16 @@ class PostgresqlBackend(DatabaseBackend):
             kwargs["host"] = dburi.hostname
         self.schema = kwargs.pop("schema", None)
         return self.driver.connect(**kwargs)
+
+    def transaction(self, rollback_on_exit=False):
+
+        if self.connection.info.transaction_status != self.TRANSACTION_STATUS_IDLE:
+            warnings.warn(
+                "Nested transaction requested; "
+                "this will raise an exception in some "
+                "PostgreSQL-compatible databases"
+            )
+        return super().transaction(rollback_on_exit=rollback_on_exit)
 
     @contextmanager
     def disable_transactions(self):
@@ -64,3 +81,9 @@ class PostgresqlPsycopgBackend(PostgresqlBackend):
     """
 
     driver_module = "psycopg"
+
+    @property
+    def TRANSACTION_STATUS_IDLE(self):
+        from psycopg.pq import TransactionStatus
+
+        return TransactionStatus.IDLE
