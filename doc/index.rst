@@ -89,18 +89,59 @@ instead roll back and reapply the last migration:
 Connecting to a database
 ------------------------
 
-Database connections are specified using a URL. Examples:
+Database connections are specified using a URL, for example:
+
+.. code:: shell
+
+    yoyo list --database postgresql://scott:tiger@localhost/mydatabase
+
+The protocol part of the URL (the part before ``://``) is used to specify the backend.
+Yoyo provides the following core backends:
+
+- ``postgresql`` (psycopg2_)
+- ``postgresql+psycopg`` (psycopg3_)
+- ``mysql`` (pymysql_)
+- ``mysql+mysqldb`` (mysqlclient_)
+- ``sqlite`` (sqlite3_)
+
+And these backends have been contributed and are bundled with yoyo:
+
+- ``odbc`` (pyodbc_)
+- ``oracle`` (`cx_Oracle`_)
+- ``snowflake`` (snowflake_)
+- ``redshift`` (psycopg2_)
+
+How other parts of the URL are interpreted depends on the underlying backend
+and the DB-API driver used. The host part especially tends to be interpreted
+differently by drivers. A few of the more important differences are listed below.
+
+MySQL connections
+`````````````````
+
+mysqlclient_ and pymysql_ have
+different ways to interpret the ``host`` part of the connection URL:
+
+- With mysqlclient_ (``mysql+mysqldb://``),
+  setting the host to ``localhost`` or leaving it empty causes the
+  driver to attempt a local unix socket connection.
+- In pymysql_ (``mysql://``),
+  the driver will attempt a tcp connection in both cases.
+  Specify a unix socket connection
+  with the ``unix_socket`` option (eg ``?unix_socket=/tmp/mysql.sock``)
+
+To enable SSL, specify ``?ssl=1`` and the following options as required:
+
+- ``sslca``
+- ``sslcapath``
+- ``sslcert``
+- ``sslkey``
+- ``sslcipher``
+
+These options correspond to the ``ca``, ``capath``, ``cert``, ``key`` and ``cipher`` options used by `mysql_ssl_set <https://dev.mysql.com/doc/c-api/8.0/en/mysql-ssl-set.html>`_.
+
+Example configurations:
 
 .. code:: ini
-
-  # SQLite: use 4 slashes for an absolute database path on unix like platforms
-  database = sqlite:////home/user/mydb.sqlite
-
-  # SQLite: use 3 slashes for a relative path
-  database = sqlite:///mydb.sqlite
-
-  # SQLite: absolute path on Windows.
-  database = sqlite:///c:\home\user\mydb.sqlite
 
   # MySQL: Network database connection
   database = mysql://scott:tiger@localhost/mydatabase
@@ -114,17 +155,50 @@ Database connections are specified using a URL. Examples:
   # MySQL with SSL/TLS enabled
   database = mysql+mysqldb://scott:tiger@localhost/mydatabase?ssl=yes&sslca=/path/to/cert
 
-  # PostgreSQL: database connection
+PostgreSQL connections
+``````````````````````
+
+The psycopg family of drivers will use a unix socket if the host is left empty
+(or the value of ``PGHOST`` if this is set in your environment). Otherwise it will attempt a tcp connection to the specified host.
+
+To force a unix socket connection leave the host part of the URL
+empty and provide a ``host`` option that points to the directory containing the socket
+(eg ``postgresql:///mydb?host=/path/to/socket/``).
+
+The postgresql backends also allow a custom schema to be selected by specifying a ``schema`` option, eg ``postgresql://…/mydatabase?schema=myschema``.
+
+Example configurations:
+
+.. code:: ini
+
   database = postgresql://scott:tiger@localhost/mydatabase
 
-  # PostgreSQL: unix socket connection
+  # unix socket connection
   database = postgresql://scott:tiger@/mydatabase
 
-  # PostgreSQL with the newer psycopg 3 driver
+  # unix socket at a non-standard location and port number
+  database = postgresql://scott:tiger@/mydatabase?host=/var/run/postgresql&port=5434
+
+  # PostgreSQL with psycopg 3 driver
   database = postgresql+psycopg://scott:tiger@localhost/mydatabase
 
-  # PostgreSQL: changing the schema (via set search_path)
+  # Changing the default schema
   database = postgresql://scott:tiger@/mydatabase?schema=some_schema
+
+SQLite connections
+``````````````````
+
+The SQLite backend ignores everything in the connection URL except the database
+name, which should be a filename, or the special value ``:memory:`` for an in-memory database.
+
+3 slashes are required to specify a relative path::
+
+    sqlite:///mydb.sqlite
+
+and 4 for an absolute path on unix-like platforms::
+
+    sqlite:////home/user/mydb.sqlite
+
 
 Password security
 -----------------
@@ -451,7 +525,7 @@ rollbacks happen. For example:
 Disabling transactions
 ----------------------
 
-You can disable transaction handling within a migration by setting
+Disable transaction handling within a migration by setting
 ``__transactional__ = False``, eg:
 
 .. code:: python
@@ -536,8 +610,7 @@ in the package metadata (typically in ``setup.cfg``), for example:
         mybackend = mypackage:MyBackend
 
 
-You can then use the backend by specifying ``'mybackend'`` as the driver
-protocol::
+Use the backend by specifying ``'mybackend'`` as the driver protocol::
 
   .. code:: sh
 
@@ -611,3 +684,11 @@ Changelog
 =========
 
 .. include:: ../CHANGELOG.rst
+.. _mysqlclient: https://pypi.org/project/mysqlclient/
+.. _pymysql: https://pypi.org/project/pymysql/
+.. _psycopg2: https://pypi.org/project/psycopg2/
+.. _psycopg3: https://pypi.org/project/psycopg/
+.. _sqlite3: https://docs.python.org/3/library/sqlite3.html
+.. _pyodbc: https://pypi.org/project/pyodbc/
+.. _cx_Oracle: https://pypi.org/project/cx-Oracle/
+.. _snowflake: https://pypi.org/project/snowflake-connector-python/
