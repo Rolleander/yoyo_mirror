@@ -22,7 +22,7 @@ They can be as simple as this:
 Installation
 ==================
 
-Install yoyo-migrations using from the PyPI, for example:
+Install yoyo-migrations from the PyPI:
 
 .. code:: shell
 
@@ -65,8 +65,8 @@ List available migrations:
     yoyo list --database sqlite:////home/sheila/important.db ./migrations
 
 
-During development, the ``yoyo develop`` command can be used to apply any
-unapplied migrations without further prompting:
+During development, the ``yoyo develop`` command applies any
+pending migrations without prompting:
 
 .. code:: shell
 
@@ -77,13 +77,7 @@ unapplied migrations without further prompting:
         [00000002_add-table-bar]
 
 If there are no migrations waiting to be applied the ``develop`` command will
-instead roll back and reapply the last migration:
-
-.. code:: shell
-
-    $ yoyo develop --database postgresql://localhost/dev ./migrations
-    Reapplying 1 migration:
-        [00000002_add-table-bar]
+instead roll back and reapply the last migration.
 
 
 Connecting to a database
