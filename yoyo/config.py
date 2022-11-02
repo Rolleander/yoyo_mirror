@@ -84,8 +84,9 @@ def update_argparser_defaults(parser, defaults):
 
 def read_config(src: Optional[str]) -> ConfigParser:
     """
-    Read the configuration file at ``path``, or return an empty
-    ConfigParse object if ``path`` is ``None``.
+    Read the configuration file at ``src`` and construct a ConfigParser instance.
+
+    If ``src`` is None a new, empty ConfigParse object will be created.
     """
     if src is None:
         return get_configparser(get_interpolation_defaults())
