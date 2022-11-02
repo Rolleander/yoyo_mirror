@@ -256,30 +256,33 @@ def get_migrations(args, backend, direction=None):
     return migrations
 
 
-def apply(args, config):
+def apply(args, config) -> int:
     backend = get_backend(args, config)
     with backend.lock():
         migrations = get_migrations(args, backend)
         backend.apply_migrations(migrations, args.force)
+    return 0
 
 
-def reapply(args, config):
+def reapply(args, config) -> int:
     backend = get_backend(args, config)
     with backend.lock():
         migrations = get_migrations(args, backend)
         backend.rollback_migrations(migrations, args.force)
         migrations = backend.to_apply(migrations)
         backend.apply_migrations(migrations, args.force)
+    return 0
 
 
-def rollback(args, config):
+def rollback(args, config) -> int:
     backend = get_backend(args, config)
     with backend.lock():
         migrations = get_migrations(args, backend)
         backend.rollback_migrations(migrations, args.force)
+    return 0
 
 
-def develop(args, config):
+def develop(args, config) -> int:
     args.batch_mode = True
     backend = get_backend(args, config)
     with backend.lock():
@@ -303,28 +306,32 @@ def develop(args, config):
             backend.rollback_migrations(migrations, args.force)
             migrations = get_migrations(args, backend, "apply")
             backend.apply_migrations(migrations, args.force)
+    return 0
 
 
-def mark(args, config):
+def mark(args, config) -> int:
     backend = get_backend(args, config)
     with backend.lock():
         migrations = get_migrations(args, backend)
         backend.mark_migrations(migrations)
+    return 0
 
 
-def unmark(args, config):
+def unmark(args, config) -> int:
     backend = get_backend(args, config)
     with backend.lock():
         migrations = get_migrations(args, backend)
         backend.unmark_migrations(migrations)
+    return 0
 
 
-def break_lock(args, config):
+def break_lock(args, config) -> int:
     backend = get_backend(args, config)
     backend.break_lock()
+    return 0
 
 
-def list_migrations(args, config):
+def list_migrations(args, config) -> int:
     backend = get_backend(args, config)
     migrations = read_migrations(*args.sources)
     migrations = filter_migrations(migrations, args.match)
@@ -343,6 +350,7 @@ def list_migrations(args, config):
             for m in migrations
         )
         print(tabulate.tabulate(data, headers=("STATUS", "ID", "SOURCE")))
+    return 0
 
 
 def prompt_migrations(backend, migrations, direction):

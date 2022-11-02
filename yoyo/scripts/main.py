@@ -301,13 +301,15 @@ def main(argv=None):
 
     try:
         if vars(args).get("func"):
-            args.func(args, config)
+            exitcode = args.func(args, config)
     except InvalidArgument as e:
         argparser.error(e.args[0])
 
     if config_is_empty and args.use_config_file and not args.batch_mode:
         prompt_save_config(config, args.config or CONFIG_FILENAME)
 
+    return exitcode
+
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    sys.exit(main(sys.argv[1:]))
