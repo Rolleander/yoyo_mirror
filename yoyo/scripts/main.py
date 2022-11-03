@@ -28,6 +28,7 @@ from yoyo.config import CONFIG_FILENAME
 from yoyo.config import find_config
 from yoyo.config import read_config
 from yoyo.config import save_config
+from yoyo.config import config_changed
 from yoyo.config import update_argparser_defaults
 
 verbosity_levels = {
@@ -70,9 +71,8 @@ def parse_args(
     global_args, _ = globalparser.parse_known_args(argv)
 
     # Read the config file and create a dictionary of defaults for argparser
-    config = read_config(
-        (global_args.config or find_config()) if global_args.use_config_file else None
-    )
+    configfile = global_args.config or find_config()
+    config = read_config(configfile if global_args.use_config_file else None)
 
     defaults = {}
     for argname, getter in config_args.items():
@@ -309,7 +309,9 @@ def main(argv=None):
         argparser.error(e.args[0])
 
     if config_is_empty and args.use_config_file and not args.batch_mode:
-        prompt_save_config(config, args.config or CONFIG_FILENAME)
+        config_file = args.config or CONFIG_FILENAME
+        if config_changed(config, config_file):
+            prompt_save_config(config, config_file)
 
     return exitcode
 

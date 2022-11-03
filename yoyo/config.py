@@ -206,3 +206,12 @@ def find_config():
             return path
         d = os.path.dirname(d)
     return None
+
+
+def config_changed(config: ConfigParser, path: str) -> bool:
+    def to_dict(config: ConfigParser):
+        return {k: dict(section.items()) for k, section in config.items()}
+
+    if Path(path).exists():
+        return to_dict(read_config(path)) != to_dict(config)
+    return True
