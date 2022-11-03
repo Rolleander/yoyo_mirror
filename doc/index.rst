@@ -19,14 +19,56 @@ They can be as simple as this:
    ]
 
 
-Installation
-==================
+Installation and project setup
+==============================
 
-Install yoyo-migrations from the PyPI:
+Install yoyo-migrations from PyPI:
 
 .. code:: shell
 
    pip install yoyo-migrations
+
+
+Initialize yoyo for your project, supplying a database connection string and migrations directory name, for example:
+
+.. code:: shell
+
+    yoyo init --database sqlite:///mydb.sqlite3 migrations
+
+This will create a new, empty directory called ``migrations`` and install a
+``yoyo.ini`` configuration file in the current directory. The configuration file
+will contain any database credentials supplied on the command line. If you do
+not wish this to happen, then omit the ``--database`` argument from the
+command.
+
+Create a new migration by running ``yoyo new``. By default, a Python format file is generated, use ``--sql`` if you prefer SQL format:
+
+.. code:: shell
+
+    yoyo new --sql
+
+An editor will open with a template migration file.
+Add a comment explaining what the migration does followed by the SQL commands,
+for example:
+
+.. code:: sql
+
+   -- Create table foo
+   -- depends:
+
+   CREATE TABLE foo (
+        a int
+   );
+
+
+Save and exit, and the new migration file will be created.
+Check your migration has been created with ``yoyo list`` and apply it with
+``yoyo apply``:
+
+.. code:: shell
+
+    $ yoyo list
+    $ yoyo apply
 
 
 
