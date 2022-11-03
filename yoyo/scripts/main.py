@@ -18,6 +18,7 @@ import configparser
 import logging
 import os
 import sys
+import typing as t
 
 from yoyo import connections
 from yoyo import default_migration_table
@@ -46,11 +47,13 @@ class InvalidArgument(Exception):
     pass
 
 
-def parse_args(argv=None):
+def parse_args(
+    argv=None,
+) -> t.Tuple[configparser.ConfigParser, argparse.ArgumentParser, argparse.Namespace]:
     """
     Parse the config file and command line args.
 
-    :return: tuple of (argparser, parsed_args)
+    :return: tuple of ``(parsed config file, argument parser, parsed arguments)``
     """
     #: List of arguments whose defaults should be read from the config file
     config_args = {
