@@ -75,55 +75,74 @@ Check your migration has been created with ``yoyo list`` and apply it with
 Command line usage
 ==================
 
-Start a new migration:
+You can see the list of available commands by running:
+
+.. command-output:: yoyo --help
+
+
+You can check options for any command with ``yoyo <command> --help``
+
+yoyo new
+--------
+
+Start a new migration. ``yoyo new`` will create a new migration file and opens it your configured editor.
+
+By default a Python formation migration will be created. To use the simpler SQL format, specify ``--sql``.
 
 .. code:: shell
 
-  yoyo new ./migrations -m "Add column to foo"
+  yoyo new -m "Add column to foo"
+  yoyo new --sql
 
-Apply migrations from directory ``migrations`` to a PostgreSQL database:
+yoyo list
+----------
 
-.. code:: shell
+List available migrations. Each migration will be prefixed with one of ``U``
+(unapplied) or ``A`` (applied).
 
-   yoyo apply --database postgresql://scott:tiger@localhost/db ./migrations
+yoyo apply
+----------
 
-Rollback migrations previously applied to a MySQL database:
-
-.. code:: shell
-
-   yoyo rollback --database mysql://scott:tiger@localhost/database ./migrations
-
-Reapply (ie rollback then apply again) migrations to a SQLite database at
-location ``/home/sheila/important.db``:
-
-.. code:: shell
-
-    yoyo reapply --database sqlite:////home/sheila/important.db ./migrations
-
-List available migrations:
-
-.. code:: shell
-
-    yoyo list --database sqlite:////home/sheila/important.db ./migrations
+Apply migrations to the target database. By default this will prompt you for each unapplied migration. To turn off prompting use ``--batch`` or specify ``batch_mode = on`` in ``yoyo.ini``.
 
 
-During development, the ``yoyo develop`` command applies any
-pending migrations without prompting:
+yoyo rollback
+-------------
 
-.. code:: shell
+By default this will prompt you for each applied migration, starting with the most recently applied.
 
-    $ yoyo develop --database postgresql://localhost/mydb migrations
-    Applying 3 migrations:
-        [00000000_initial-schema]
-        [00000001_add-table-foo]
-        [00000002_add-table-bar]
+If you wish to rollback a single migration, specify the migration with the ``-r``/``--revision`` flag. Note that this will also cause any migrations that depend on the selected migration to be rolled back.
 
-If there are no migrations waiting to be applied the ``develop`` command will
-instead roll back and reapply the last migration.
+
+yoyo reapply
+-------------
+
+Reapply (ie rollback then apply again) migrations. As with `yoyo rollback`_, you can select a target migration with ``-r``/``--revision``
+
+
+yoyo develop
+------------
+
+Apply any unapplied migrations without prompting.
+
+If there are no unapplied migrations, rollback and reapply the most recent
+migration. Use ``yoyo develop -n <n>`` to act on just the *n* most recently
+applied migrations.
+
+yoyo mark
+---------
+
+Mark one or more migrations as applied, without actually applying them.
+
+yoyo unmark
+-----------
+
+Unmark one or more migrations as unapplied, without actually rolling them back.
+
 
 
 Connecting to a database
-------------------------
+========================
 
 Database connections are specified using a URL, for example:
 
@@ -152,7 +171,7 @@ and the DB-API driver used. The host part especially tends to be interpreted
 differently by drivers. A few of the more important differences are listed below.
 
 MySQL connections
-`````````````````
+-----------------
 
 mysqlclient_ and pymysql_ have
 different ways to interpret the ``host`` part of the connection URL:
@@ -192,7 +211,7 @@ Example configurations:
   database = mysql+mysqldb://scott:tiger@localhost/mydatabase?ssl=yes&sslca=/path/to/cert
 
 PostgreSQL connections
-``````````````````````
+----------------------
 
 The psycopg family of drivers will use a unix socket if the host is left empty
 (or the value of ``PGHOST`` if this is set in your environment). Otherwise it will attempt a tcp connection to the specified host.
@@ -222,7 +241,7 @@ Example configurations:
   database = postgresql://scott:tiger@/mydatabase?schema=some_schema
 
 SQLite connections
-``````````````````
+------------------
 
 The SQLite backend ignores everything in the connection URL except the database
 name, which should be a filename, or the special value ``:memory:`` for an in-memory database.
