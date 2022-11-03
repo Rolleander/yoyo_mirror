@@ -17,6 +17,7 @@ from datetime import datetime
 from tempfile import mkdtemp
 from functools import partial
 from itertools import count
+import pathlib
 import io
 import os
 import os.path
@@ -596,3 +597,25 @@ class TestDevelopCommand(TestInteractiveScript):
                 ("m1", "apply"),
                 ("m2", "apply"),
             ]
+
+
+class TestInitCommand(TestInteractiveScript):
+    def test_it_creates_project(self):
+        main(["-b", "init", "migrations", "--database", "sqlite://foo"])
+        config = (pathlib.Path(self.tmpdir) / "yoyo.ini").read_text()
+        assert "database = sqlite://foo" in config
+        assert "sources = migrations" in config
+        assert (pathlib.Path(self.tmpdir) / "migrations").is_dir()
+
+    def test_it_doesnt_overwrite(self):
+        configfile = pathlib.Path(self.tmpdir) / "yoyo.ini"
+        configfile.write_text("[existing file]")
+        main(["-b", "init", "migrations", "--database", "sqlite://foo"])
+        assert "database = sqlite://foo" not in configfile.read_text()
+        assert "existing file" in configfile.read_text()
+        assert not (pathlib.Path(self.tmpdir) / "migrations").exists()
+
+    def test_it_doesnt_prompt(self):
+        with patch("yoyo.scripts.main.prompt_save_config") as prompt_save_config:
+            main(["-b", "init", "migrations", "--database", "sqlite://foo"])
+            assert prompt_save_config.called is False

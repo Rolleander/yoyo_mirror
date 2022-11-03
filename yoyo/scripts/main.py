@@ -140,8 +140,11 @@ def make_argparser():
 
     subparsers = argparser.add_subparsers(help="Commands help")
 
-    from . import migrate, newmigration
+    from . import migrate
+    from . import newmigration
+    from . import init
 
+    init.install_argparsers(global_parser, subparsers)
     migrate.install_argparsers(global_parser, subparsers)
     newmigration.install_argparsers(global_parser, subparsers)
 
