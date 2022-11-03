@@ -351,7 +351,7 @@ Migrations may declare dependencies on other migrations via the
     ]
 
 
-If you use the ``yoyo new`` command the ``_depends__`` attribute will be auto
+If you use the ``yoyo new`` command the ``__depends__`` attribute will be auto
 populated for you.
 
 
