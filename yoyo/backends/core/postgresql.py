@@ -64,16 +64,6 @@ class PostgresqlBackend(DatabaseBackend):
         connection.autocommit = autocommit
         return connection
 
-    def transaction(self, rollback_on_exit=False):
-
-        if self.connection.info.transaction_status != self.TRANSACTION_STATUS_IDLE:
-            warnings.warn(
-                "Nested transaction requested; "
-                "this will raise an exception in some "
-                "PostgreSQL-compatible databases"
-            )
-        return super().transaction(rollback_on_exit=rollback_on_exit)
-
     @contextmanager
     def disable_transactions(self):
         with super(PostgresqlBackend, self).disable_transactions():
@@ -100,6 +90,15 @@ class PostgresqlBackend(DatabaseBackend):
     def rollback(self):
         self.execute("ROLLBACK")
         super().rollback()
+
+    def begin(self):
+        if self.connection.info.transaction_status != self.TRANSACTION_STATUS_IDLE:
+            warnings.warn(
+                "Nested transaction requested; "
+                "this will raise an exception in some "
+                "PostgreSQL-compatible databases"
+            )
+        return super().begin()
 
 
 class PostgresqlPsycopgBackend(PostgresqlBackend):
