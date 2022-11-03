@@ -1,5 +1,6 @@
 # Minimal makefile for Sphinx documentation
 #
+export PATH:=$(PATH):../.tox/py310-sphinx/bin/
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
