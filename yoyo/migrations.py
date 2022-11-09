@@ -312,16 +312,14 @@ class TransactionWrapper(StepBase):
         return "<TransactionWrapper {!r}>".format(self.step)
 
     def apply(self, backend, force=False, direction="apply"):
-        with backend.transaction() as transaction:
-            try:
+        try:
+            with backend.transaction():
                 getattr(self.step, direction)(backend, force)
-            except backend.DatabaseError:
-                if force or self.ignore_errors in (direction, "all"):
-                    logger.exception("Ignored error in %r", self.step)
-                    transaction.rollback()
-                    return
-                else:
-                    raise
+        except backend.DatabaseError:
+            if force or self.ignore_errors in (direction, "all"):
+                logger.exception("Ignored error in %r", self.step)
+            else:
+                raise
 
     def rollback(self, backend, force=False):
         self.apply(backend, force, "rollback")

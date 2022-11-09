@@ -56,9 +56,9 @@ def drop_all_tables(backend):
 
 
 def drop_yoyo_tables(backend):
-    for table in backend.list_tables():
-        if table.startswith("yoyo") or table.startswith("_yoyo"):
-            with backend.transaction():
+    with backend.transaction():
+        for table in backend.list_tables():
+            if table.startswith("yoyo") or table.startswith("_yoyo"):
                 backend.execute("DROP TABLE {}".format(table))
 
 

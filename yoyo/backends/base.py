@@ -45,9 +45,9 @@ class TransactionManager:
     when the context manager block closes
     """
 
-    def __init__(self, backend):
+    def __init__(self, backend, rollback_on_exit=False):
         self.backend = backend
-        self._rollback = False
+        self.rollback_on_exit = rollback_on_exit
 
     def __enter__(self):
         self._do_begin()
@@ -58,17 +58,10 @@ class TransactionManager:
             self._do_rollback()
             return None
 
-        if self._rollback:
+        if self.rollback_on_exit:
             self._do_rollback()
         else:
             self._do_commit()
-
-    def rollback(self):
-        """
-        Flag that the transaction will be rolled back when the with statement
-        exits
-        """
-        self._rollback = True
 
     def _do_begin(self):
         """
@@ -237,9 +230,12 @@ class DatabaseBackend:
         table_name = "yoyo_tmp_{}".format(utils.get_random_string(10))
         table_name_quoted = self.quote_identifier(table_name)
         sql = self.create_test_table_sql.format(table_name_quoted=table_name_quoted)
-        with self.transaction() as t:
-            self.execute(sql)
-            t.rollback()
+        try:
+            with self.transaction(rollback_on_exit=True):
+                self.execute(sql)
+        except self.DatabaseError:
+            return False
+
         try:
             with self.transaction():
                 self.execute("DROP TABLE {}".format(table_name_quoted))
@@ -259,12 +255,12 @@ class DatabaseBackend:
         )
         return [row[0] for row in cursor.fetchall()]
 
-    def transaction(self):
+    def transaction(self, rollback_on_exit=False):
         if not self._in_transaction:
-            return TransactionManager(self)
+            return TransactionManager(self, rollback_on_exit=rollback_on_exit)
 
         else:
-            return SavepointTransactionManager(self)
+            return SavepointTransactionManager(self, rollback_on_exit=rollback_on_exit)
 
     def cursor(self):
         return self.connection.cursor()
@@ -282,6 +278,7 @@ class DatabaseBackend:
         """
         Begin a new transaction
         """
+        assert not self._in_transaction
         self._in_transaction = True
         self.execute("BEGIN")
 

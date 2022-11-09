@@ -48,15 +48,12 @@ def get_current_version(backend):
         return 0
     if version_table not in tables:
         return 1
-    with backend.transaction():
-        cursor = backend.execute(
-            "SELECT max(version) FROM {} ".format(
-                backend.quote_identifier(version_table)
-            )
-        )
-        version = cursor.fetchone()[0]
-        assert version in schema_versions
-        return version
+    cursor = backend.execute(
+        f"SELECT max(version) FROM {backend.quote_identifier(version_table)}"
+    )
+    version = cursor.fetchone()[0]
+    assert version in schema_versions
+    return version
 
 
 def mark_schema_version(backend, version):

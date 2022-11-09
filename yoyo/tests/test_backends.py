@@ -44,11 +44,10 @@ class TestTransactionHandling(object):
         with backend.transaction():
             backend.execute("INSERT INTO yoyo_t values ('A')")
 
-            with backend.transaction() as trans:
+            with backend.transaction(rollback_on_exit=True):
                 backend.execute("INSERT INTO yoyo_t values ('B')")
-                trans.rollback()
 
-            with backend.transaction() as trans:
+            with backend.transaction():
                 backend.execute("INSERT INTO yoyo_t values ('C')")
 
         with backend.transaction():
@@ -95,12 +94,11 @@ class TestTransactionHandling(object):
         if backend.has_transactional_ddl:
             return
 
-        with backend.transaction() as trans:
+        with backend.transaction(rollback_on_exit=True):
             backend.execute("CREATE TABLE yoyo_a (id INT)")  # implicit commit
             backend.execute("INSERT INTO yoyo_a VALUES (1)")
             backend.execute("CREATE TABLE yoyo_b (id INT)")  # implicit commit
             backend.execute("INSERT INTO yoyo_b VALUES (1)")
-            trans.rollback()
 
         count_a = backend.execute("SELECT COUNT(1) FROM yoyo_a").fetchall()[0][0]
         assert count_a == 1
