@@ -46,7 +46,7 @@ def is_tmpfile(p, directory=None):
 
 
 class TestInteractiveScript(object):
-    def setup(self):
+    def setup_method(self):
         self.stdout_tty_patch = patch("sys.stdout.isatty", return_value=True)
         self.stdout_tty_patch.start()
         self.confirm_patch = patch("yoyo.utils.confirm", return_value=False)
@@ -58,7 +58,7 @@ class TestInteractiveScript(object):
         self.saved_cwd = os.getcwd()
         os.chdir(self.tmpdir)
 
-    def teardown(self):
+    def teardown_method(self):
         self.prompt_patch.stop()
         self.confirm_patch.stop()
         self.stdout_tty_patch.stop()
@@ -390,19 +390,19 @@ class TestUnmarkCommand(TestInteractiveScript):
 
 
 class TestNewMigration(TestInteractiveScript):
-    def setup(self):
+    def setup_method(self):
         def mockstat(f, c=count()):
             return Mock(st_mtime=next(c))
 
-        super(TestNewMigration, self).setup()
+        super(TestNewMigration, self).setup_method()
         self.subprocess_patch = patch("yoyo.scripts.newmigration.subprocess")
         self.subprocess = self.subprocess_patch.start()
         self.subprocess.call.return_value = 0
         self.stat_patch = patch("yoyo.scripts.newmigration.stat", mockstat)
         self.stat_patch.start()
 
-    def teardown(self):
-        super(TestNewMigration, self).teardown()
+    def teardown_method(self):
+        super(TestNewMigration, self).teardown_method()
         self.subprocess_patch.stop()
         self.stat_patch.stop()
 

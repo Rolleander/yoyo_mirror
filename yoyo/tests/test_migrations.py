@@ -302,7 +302,7 @@ class TestMigrationList(object):
 
 
 class TestAncestorsDescendants(object):
-    def setup(self):
+    def setup_method(self):
         self.m1 = Mock(id="m1", depends=["m2", "m3"])
         self.m2 = Mock(id="m2", depends=["m3"])
         self.m3 = Mock(id="m3", depends=["m5"])
