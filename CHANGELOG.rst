@@ -1,3 +1,12 @@
+8.2.0
+---------------------------
+
+* Bugfix: prevent duplicate 'BEGIN' statements being issued with Postgresql
+  backend. This adds a new ``rollback_on_exit`` argument to the
+  ``DatabaseBackend.transaction()`` method and removes the ``rollback`` method
+  from the returned ``TransactionManager`` object.
+* Add support for Python 3.11
+
 8.1.0 (released 2022-11-03)
 ---------------------------
 
