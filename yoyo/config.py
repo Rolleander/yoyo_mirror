@@ -18,15 +18,11 @@ Handle config file and argument parsing
 from collections import deque
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 import configparser
 import functools
 import itertools
 import os
+import typing as t
 
 CONFIG_FILENAME = "yoyo.ini"
 CONFIG_EDITOR_KEY = "editor"
@@ -44,7 +40,7 @@ class CircularReferenceError(configparser.Error):
 
 class CustomInterpolation(configparser.BasicInterpolation):
 
-    defaults = {}  # type:  Dict[str, str]
+    defaults: t.Dict[str, str] = {}
 
     def __init__(self, defaults):
         self.defaults = defaults or {}
@@ -57,7 +53,7 @@ class CustomInterpolation(configparser.BasicInterpolation):
         )
 
 
-def get_interpolation_defaults(path: Optional[str] = None):
+def get_interpolation_defaults(path: t.Optional[str] = None):
     parser = configparser.ConfigParser()
     defaults = {
         parser.optionxform(k): v.replace("%", "%%") for k, v in os.environ.items()
@@ -82,7 +78,7 @@ def update_argparser_defaults(parser, defaults):
     parser.set_defaults(**{k: v for k, v in defaults.items() if k in known_args})
 
 
-def read_config(src: Optional[str]) -> ConfigParser:
+def read_config(src: t.Optional[str]) -> ConfigParser:
     """
     Read the configuration file at ``src`` and construct a ConfigParser instance.
 
@@ -95,9 +91,9 @@ def read_config(src: Optional[str]) -> ConfigParser:
     config = _read_config(path)
     config_files = {path: config}
     merge_paths = deque([path])
-    to_process = [
-        ((), path, config)
-    ]  # type: List[Tuple[Union[Tuple, Tuple[Path]], Path, ConfigParser]]
+    to_process: t.List[t.Tuple[t.Union[t.List[Path]], Path, ConfigParser]] = [
+        ([], path, config)
+    ]
     while to_process:
         ancestors, path, config = to_process.pop()
         inherits, includes = find_includes(path, config)
@@ -108,7 +104,7 @@ def read_config(src: Optional[str]) -> ConfigParser:
                 )
             config = _read_config(p)
             config_files[p] = config
-            to_process.append((ancestors + (path,), p, config))
+            to_process.append((ancestors + [path], p, config))
 
         merge_paths.extendleft(inherits)
         merge_paths.extend(includes)
@@ -120,7 +116,7 @@ def read_config(src: Optional[str]) -> ConfigParser:
     return merged
 
 
-def _make_path(s: str, basepath: Optional[Path] = None) -> Path:
+def _make_path(s: str, basepath: t.Optional[Path] = None) -> Path:
     """
     Return a fully resolved Path. Raises FileNotFoundError if the path does not
     exist.
@@ -152,9 +148,9 @@ def _read_config(path: Path) -> ConfigParser:
 
 def find_includes(
     basepath: Path, config: ConfigParser
-) -> Tuple[List[Path], List[Path]]:
+) -> t.Tuple[t.List[Path], t.List[Path]]:
 
-    result = {INCLUDE: [], INHERIT: []}  # type: Dict[str, List[Path]]
+    result: t.Dict[str, t.List[Path]] = {INCLUDE: [], INHERIT: []}
     for key in [INHERIT, INCLUDE]:
         try:
             paths = config["DEFAULT"][key].split()
@@ -177,7 +173,7 @@ def find_includes(
     return result[INHERIT], result[INCLUDE]
 
 
-def merge_configs(configs: List[ConfigParser]) -> ConfigParser:
+def merge_configs(configs: t.List[ConfigParser]) -> ConfigParser:
     def merge(c1, c2):
         c1.read_dict(c2)
         return c1

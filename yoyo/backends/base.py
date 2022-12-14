@@ -107,7 +107,7 @@ class SavepointTransactionManager(TransactionManager):
 
 class DatabaseBackend:
 
-    driver_module = ""  # type: str
+    driver_module = ""
 
     log_table = "_yoyo_log"
     lock_table = "yoyo_lock"
