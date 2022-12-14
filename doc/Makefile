@@ -4,7 +4,7 @@ export PATH:=$(PATH):../.tox/py310-sphinx/bin/
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = ../.tox/py310-sphinx/bin/sphinx-build
+SPHINXBUILD   = ../.tox/py311-sphinx/bin/sphinx-build
 SPHINXPROJ    = yoyo-migrations
 SOURCEDIR     = .
 BUILDDIR      = _build
