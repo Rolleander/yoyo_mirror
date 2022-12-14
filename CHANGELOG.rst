@@ -1,4 +1,4 @@
-8.2.0
+8.2.0 (released 2022-12-14)
 ---------------------------
 
 * Bugfix: prevent duplicate 'BEGIN' statements being issued with Postgresql
